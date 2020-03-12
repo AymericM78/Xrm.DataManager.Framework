@@ -145,6 +145,7 @@ namespace Xrm.DataManager.Framework
 
                 // Retrieve records for next round
                 results = Utilities.TryRetrieveMultiple(ProxiesPool, Logger, query);
+                data = PrepareData(results.Entities);
             }
 
             // If the query return nothing, we have finished!
