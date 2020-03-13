@@ -61,20 +61,14 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
+        [XmlAttribute("ConnectionString")]
+        public string ConnectionString
+        {
+            get; set;
+        }
+
         [XmlAttribute("Url")]
         public string Url
-        {
-            get; set;
-        }
-
-        [XmlAttribute("Login")]
-        public string Login
-        {
-            get; set;
-        }
-
-        [XmlAttribute("Password")]
-        public string Password
         {
             get; set;
         }

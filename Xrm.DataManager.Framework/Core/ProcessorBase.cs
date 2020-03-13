@@ -79,8 +79,18 @@ namespace Xrm.DataManager.Framework
         {
             JobSettings.CrmOrganizationName = instance.UniqueName;
 
-            var instanceUri = new Uri(instance.Url);
-            ProxiesPool = new ProxiesPool(instanceUri, JobSettings.CrmUserName, JobSettings.CrmUserPassword);
+            if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
+            {
+                ProxiesPool = new ProxiesPool(instance.ConnectionString, this.Logger);
+            }
+            else
+            {
+                // Maintain old auth mechanism for compatibility
+                // TODO : Remove old auth mechanism
+                var instanceUri = new Uri(instance.Url);
+                ProxiesPool = new ProxiesPool(instanceUri, JobSettings.CrmUserName, JobSettings.CrmUserPassword);
+            }
+
             using (var proxy = ProxiesPool.GetProxy())
             {
                 var request = new WhoAmIRequest();

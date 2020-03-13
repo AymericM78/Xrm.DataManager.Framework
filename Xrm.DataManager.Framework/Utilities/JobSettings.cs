@@ -15,6 +15,7 @@ namespace Xrm.DataManager.Framework
         {
             get;
         }
+
         public string CrmUserName => GetParameter<string>("Crm.User.Name");
         public string CrmUserPassword => GetParameter<string>("Crm.User.Password");
         public string CrmInstanceName => GetParameter<string>("Crm.Instance.Name");

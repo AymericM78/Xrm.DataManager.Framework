@@ -1,11 +1,11 @@
 
 using Microsoft.Xrm.Sdk;
-using ShellProgressBar;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,112 +81,96 @@ namespace Xrm.DataManager.Framework
 
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
-            var options = new ProgressBarOptions
-            {
-                ForegroundColor = ConsoleColor.Yellow,
-                ForegroundColorDone = ConsoleColor.DarkGreen,
-                BackgroundColor = ConsoleColor.DarkGray,
-                BackgroundCharacter = '\u2593'
-            };
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
-            using (var pbar = new ProgressBar(lines.Count, "Processing CRM records", options))
-            {
-                var linesToProcess = lines.Skip(1);
-                // Parallel processing 
-                Parallel.ForEach(
-                    linesToProcess, //these are your items to process - should be many many thousands in here 
-                    new ParallelOptions()
+
+            var linesToProcess = lines.Skip(1);
+
+            Parallel.ForEach(
+                linesToProcess,
+                new ParallelOptions()
+                {
+                    MaxDegreeOfParallelism = threads.Value
+                },
+                () =>
+                {
+                    var proxy = ProxiesPool.GetProxy();
+                    return new
                     {
-                        MaxDegreeOfParallelism = threads.Value
-                    },
-                    () =>
+                        Proxy = proxy
+                    };
+                },
+                (item, loopState, context) =>
+                {
+                    // Increment progress index
+                    Interlocked.Increment(ref processedItemCount);
+
+                    var isPivotLine = item.Contains(PivotUniqueMarker);
+                    if (isPivotLine)
                     {
-                        // partition initialize // localInit - called once per Task.
-                        // get the proxy to use in the thread parition - this creates ONE proxy "per thread"
-                        // that proxy is then re-used inside of that ONE thread 
-                        var threadLocalProxy = ProxiesPool.GetProxy();
-
-                        // Re-set CallerId as the value is not defined by default
-                        threadLocalProxy.CallerId = CallerId;
-
-                        // you can log thread parition being opened/created 
-                        // HOWEVER use appinsights or something like ent lib for threadsafety
-                        // do not log to text otherwise it *will* slow you down a lot 
-
-                        // return the context so the thread Body can use the context 
-                        return new
-                        {
-                            threadLocalProxy
-                        };
-                    },
-                    (item, loopState, context) =>
-                    {
-                        // Increment progress index
-                        Interlocked.Increment(ref processedItemCount);
-
-                        // Increment progress bar every 50 records
-                        if (processedItemCount % 50 == 0)
-                        {
-                            pbar.Tick(processedItemCount, $"Processing record {processedItemCount} / {lines.Count}");
-                        }
-                        // partition body - put the 'guts' of your operation in here 
-                        // ensure this method is one-off and all it's own 'thing' and doesn't share resources 
-
-                        // any and all current or downstream logging *must* be threadsafe and multi-thread optimized 
-                        // use appinsights or ent lib to log so that it doesn't block any other threads 
-                        // if you hit thread contention in logging it will slow down your execution greatly 
-
-                        var isPivotLine = item.Contains(PivotUniqueMarker);
-                        if (isPivotLine)
-                        {
-                            // TODO : Handle already processed pivot lines to replay errors
-                            return context;
-                        }
-
-                        Entity record = null;
-                        try
-                        {
-                            var lineData = item.Split(GetInputFileSeparator(), StringSplitOptions.RemoveEmptyEntries);
-
-                            // Retrieve CRM record based on current line
-                            record = SearchRecord(context.threadLocalProxy, lineData);
-                            ProcessRecord(context.threadLocalProxy, record, lineData);
-                            Logger.LogSuccess("Record processed with success!", record, jobName);
-
-                            // Track progress and outcome
-                            var pivotLine = string.Concat(item,
-                                defaultFileSeparator, PivotUniqueMarker,
-                                defaultFileSeparator, record.Id.ToString() /* RecordId */,
-                                defaultFileSeparator, "OK" /* Outcome */,
-                                defaultFileSeparator, "Success" /*Details */);
-                            pivotFileWriter.Write(pivotLine);
-
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogFailure(ex, record, jobName);
-
-                            // Track progress and outcome
-                            var pivotLine = string.Concat(item,
-                                defaultFileSeparator, PivotUniqueMarker,
-                                defaultFileSeparator, record?.Id.ToString() /* RecordId */,
-                                defaultFileSeparator, "KO" /* Outcome */,
-                                defaultFileSeparator, ex.Message /*Details */);
-                            pivotFileWriter.Write(pivotLine);
-                        }
-
-                        // return the context to be re-used or to be 'closed' 
+                        // TODO : Handle already processed pivot lines to replay errors
                         return context;
-                    },
-                    (context) =>
+                    }
+                    Entity record = null;
+                    try
                     {
-                        // final method per parition / task
-                        // this is only called when the thread partition is being shut down / closed / completed
-                        context.threadLocalProxy.Dispose();
-                    });
-                pbar.Tick(lines.Count, $"Processing record {lines.Count} / {lines.Count}");
-            }
+                        var lineData = item.Split(GetInputFileSeparator(), StringSplitOptions.RemoveEmptyEntries);
+
+                        // Retrieve CRM record based on current line
+                        record = SearchRecord(context.Proxy, lineData);
+                        ProcessRecord(context.Proxy, record, lineData);
+                        Logger.LogSuccess("Record processed with success!", record, jobName);
+
+                        // Track progress and outcome
+                        var pivotLine = string.Concat(item,
+                        defaultFileSeparator, PivotUniqueMarker,
+                        defaultFileSeparator, record.Id.ToString() /* RecordId */,
+                        defaultFileSeparator, "OK" /* Outcome */,
+                        defaultFileSeparator, "Success" /*Details */);
+                        pivotFileWriter.Write(pivotLine);
+
+                    }
+                    catch (FaultException<OrganizationServiceFault> faultException)
+                    {
+                        var exceptionDetails = new Dictionary<string, string>
+                            {
+                                { "Crm Exception : Activity Id", faultException.Detail.ActivityId.ToString() },
+                                { "Crm Exception : Error Code", faultException.Detail.ErrorCode.ToString() },
+                                { "Crm Exception : Message", faultException.Detail.Message?.ToString() },
+                                { "Crm Exception : Timestamp", faultException.Detail.Timestamp.ToString() },
+                                { "Crm Exception : Trace Text", faultException.Detail.TraceText?.ToString() }
+                            };
+                        Logger.LogException(faultException, exceptionDetails);
+                        Logger.LogFailure(faultException, record, jobName);
+
+                        // Track progress and outcome
+                        var pivotLine = string.Concat(item,
+                        defaultFileSeparator, PivotUniqueMarker,
+                        defaultFileSeparator, record?.Id.ToString() /* RecordId */,
+                        defaultFileSeparator, "KO" /* Outcome */,
+                        defaultFileSeparator, faultException.Message /*Details */);
+                        pivotFileWriter.Write(pivotLine);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogFailure(ex, record, jobName);
+
+                        // Track progress and outcome
+                        var pivotLine = string.Concat(item,
+                        defaultFileSeparator, PivotUniqueMarker,
+                        defaultFileSeparator, record?.Id.ToString() /* RecordId */,
+                        defaultFileSeparator, "KO" /* Outcome */,
+                        defaultFileSeparator, ex.Message /*Details */);
+                        pivotFileWriter.Write(pivotLine);
+                    }
+
+                    return context;
+                },
+                (context) =>
+                {
+                    context.Proxy.Dispose();
+                });
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, lines.Count);
             Logger.LogMessage($"{lines.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");

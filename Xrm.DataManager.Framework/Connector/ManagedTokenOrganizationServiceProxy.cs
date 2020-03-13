@@ -1,159 +1,184 @@
-﻿// Copyright (c) Christophe Gondouin (CGO Conseils). All rights reserved.
-// Licensed under the MIT License. See License.txt in the project root for license information.
-
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Client;
+﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Microsoft.Xrm.Tooling.Connector;
 using System;
 using System.IdentityModel.Tokens;
-using System.ServiceModel.Description;
+using System.ServiceModel;
 using System.ServiceModel.Security;
 
 namespace Xrm.DataManager.Framework
 {
-    public sealed class ManagedTokenOrganizationServiceProxy : OrganizationServiceProxy
+    public class ManagedTokenOrganizationServiceProxy : IOrganizationService, IDisposable
     {
-        private readonly AutoRefreshSecurityToken<OrganizationServiceProxy, IOrganizationService> _proxyManager;
+        private CrmServiceClient CrmServiceClient;
+        private string CrmConnectionString;
 
-        public ManagedTokenOrganizationServiceProxy(Uri serviceUri, ClientCredentials userCredentials)
-            : base(serviceUri, null, userCredentials, null)
+        protected ILogger Logger
         {
-            _proxyManager = new AutoRefreshSecurityToken<OrganizationServiceProxy, IOrganizationService>(this);
+            get; set;
         }
 
-        public ManagedTokenOrganizationServiceProxy(IServiceManagement<IOrganizationService> serviceManagement,
-            SecurityTokenResponse securityTokenRes)
-            : base(serviceManagement, securityTokenRes)
+        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger)
         {
-            _proxyManager = new AutoRefreshSecurityToken<OrganizationServiceProxy, IOrganizationService>(this);
+            CrmConnectionString = crmConnectionString;
+            Logger = logger;
+            InitializeClient();
         }
 
-        public ManagedTokenOrganizationServiceProxy(IServiceManagement<IOrganizationService> serviceManagement,
-            ClientCredentials userCredentials)
-            : base(serviceManagement, userCredentials)
+        private void InitializeClient()
         {
-            _proxyManager = new AutoRefreshSecurityToken<OrganizationServiceProxy, IOrganizationService>(this);
+            CrmServiceClient = new CrmServiceClient(CrmConnectionString);
+            if (CrmServiceClient.LastCrmException != null)
+            {
+                Logger.LogMessage(CrmServiceClient.LastCrmError);
+                throw CrmServiceClient.LastCrmException;
+            }
         }
 
-        protected override void AuthenticateCore()
-        {
-            _proxyManager.PrepareCredentials();
-            base.AuthenticateCore();
-        }
-
-        protected override void ValidateAuthentication()
-        {
-            _proxyManager.RenewTokenIfRequired();
-            base.ValidateAuthentication();
-        }
-
-        protected override Guid CreateCore(Entity entity)
+        public Guid Create(Entity entity)
         {
             try
             {
-                return base.CreateCore(entity);
+                return CrmServiceClient.Create(entity);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                return base.CreateCore(entity);
+                InitializeClient();
+                return CrmServiceClient.Create(entity);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                return CrmServiceClient.Create(entity);
             }
         }
 
-        protected override void UpdateCore(Entity entity)
+        public Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
         {
             try
             {
-                base.UpdateCore(entity);
+                return CrmServiceClient.Retrieve(entityName, id, columnSet);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                base.UpdateCore(entity);
+                InitializeClient();
+                return CrmServiceClient.Retrieve(entityName, id, columnSet);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                return CrmServiceClient.Retrieve(entityName, id, columnSet);
             }
         }
 
-        protected override void AssociateCore(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+        public void Update(Entity entity)
         {
             try
             {
-                base.AssociateCore(entityName, entityId, relationship, relatedEntities);
+                CrmServiceClient.Update(entity);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                base.AssociateCore(entityName, entityId, relationship, relatedEntities);
+                InitializeClient();
+                CrmServiceClient.Update(entity);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                CrmServiceClient.Update(entity);
             }
         }
 
-        protected override void DisassociateCore(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+        public void Delete(string entityName, Guid id)
         {
             try
             {
-                base.DisassociateCore(entityName, entityId, relationship, relatedEntities);
+                CrmServiceClient.Delete(entityName, id);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                base.DisassociateCore(entityName, entityId, relationship, relatedEntities);
+                InitializeClient();
+                CrmServiceClient.Delete(entityName, id);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                CrmServiceClient.Delete(entityName, id);
             }
         }
-
-        protected override void DeleteCore(string entityName, Guid id)
+        
+        public OrganizationResponse Execute(OrganizationRequest request)
         {
             try
             {
-                base.DeleteCore(entityName, id);
+                return CrmServiceClient.Execute(request);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                base.DeleteCore(entityName, id);
+                InitializeClient();
+                return CrmServiceClient.Execute(request);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                return CrmServiceClient.Execute(request);
             }
         }
 
-        protected override OrganizationResponse ExecuteCore(OrganizationRequest request)
+        public void Associate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
             try
             {
-                return base.ExecuteCore(request);
+                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                return base.ExecuteCore(request);
+                InitializeClient();
+                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
             }
         }
 
-        protected override Entity RetrieveCore(string entityName, Guid id, ColumnSet columnSet)
+        public void Disassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
             try
             {
-                return base.RetrieveCore(entityName, id, columnSet);
+                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                return base.RetrieveCore(entityName, id, columnSet);
+                InitializeClient();
+                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
             }
         }
 
-        protected override EntityCollection RetrieveMultipleCore(QueryBase query)
+        public EntityCollection RetrieveMultiple(QueryBase query)
         {
             try
             {
-                if (query is QueryExpression qe)
-                {
-                    qe.NoLock = true;
-                }
-
-                return base.RetrieveMultipleCore(query);
+                return CrmServiceClient.RetrieveMultiple(query);
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
-                ValidateAuthentication();
-                return base.RetrieveMultipleCore(query);
+                InitializeClient();
+                return CrmServiceClient.RetrieveMultiple(query);
+            }
+            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+            {
+                TransientIssueManager.ApplyDelay(e, Logger);
+                return CrmServiceClient.RetrieveMultiple(query);
             }
         }
+
+        public void Dispose() => CrmServiceClient.Dispose();
     }
 }

@@ -13,14 +13,6 @@ namespace Xrm.DataManager.Framework
 
         public static void ApplyDelay(FaultException<OrganizationServiceFault> e, ILogger logger)
         {
-            // Retry after could be too long and raised webjob timeout (no cpu activity)
-            //if (e.Detail.ErrorCode == RateLimitExceededErrorCode)
-            //{
-            //    // Use Retry-After delay when specified
-            //    delay = (TimeSpan)e.Detail.ErrorDetails["Retry-After"];
-            //    source = "Retry-After";
-            //}
-
             // Wait during random duration
             var seconds = new Random().Next(1, 100);
             var delay = TimeSpan.FromSeconds(seconds);

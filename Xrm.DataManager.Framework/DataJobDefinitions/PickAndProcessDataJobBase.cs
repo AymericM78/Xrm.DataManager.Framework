@@ -2,6 +2,7 @@
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
@@ -61,62 +62,47 @@ namespace Xrm.DataManager.Framework
                 Logger.LogMessage($"Retrieved {results.Entities.Count} records from CRM");
 
                 Parallel.ForEach(
-                data, //these are your items to process - should be many many thousands in here 
-                new ParallelOptions()
-                {
-                    MaxDegreeOfParallelism = threads.Value
-                },
-                () =>
-                {
-                    // partition initialize // localInit - called once per Task.
-                    // get the proxy to use in the thread parition - this creates ONE proxy "per thread"
-                    // that proxy is then re-used inside of that ONE thread 
-                    var threadLocalProxy = ProxiesPool.GetProxy();
-
-                    // Re-set CallerId as the value is not defined by default
-                    threadLocalProxy.CallerId = CallerId;
-
-                    // you can log thread parition being opened/created 
-                    // HOWEVER use appinsights or something like ent lib for threadsafety
-                    // do not log to text otherwise it *will* slow you down a lot 
-
-                    // return the context so the thread Body can use the context 
-                    return new
+                    data,
+                    new ParallelOptions() { MaxDegreeOfParallelism = threads.Value },
+                    () =>
                     {
-                        threadLocalProxy
-                    };
-                },
-                (item, loopState, context) =>
-                {
-                    // partition body - put the 'guts' of your operation in here 
-                    // ensure this method is one-off and all it's own 'thing' and doesn't share resources 
-
-                    // any and all current or downstream logging *must* be threadsafe and multi-thread optimized 
-                    // use appinsights or ent lib to log so that it doesn't block any other threads 
-                    // if you hit thread contention in logging it will slow down your execution greatly 
-                    try
+                        var proxy = ProxiesPool.GetProxy();
+                        return new
+                        {
+                            Proxy = proxy
+                        };
+                    },
+                    (item, loopState, context) =>
                     {
-                        ProcessRecord(context.threadLocalProxy, item);
-                        Logger.LogSuccess("Record processed with success!", item, jobName);
+                        try
+                        {
+                            ProcessRecord(context.Proxy, item);
+                            Logger.LogSuccess("Record processed with success!", item, jobName);
+                        }
+                        catch (FaultException<OrganizationServiceFault> faultException)
+                        {
+                            var exceptionDetails = new Dictionary<string, string>
+                            {
+                                { "Crm Exception : Activity Id", faultException.Detail.ActivityId.ToString() },
+                                { "Crm Exception : Error Code", faultException.Detail.ErrorCode.ToString() },
+                                { "Crm Exception : Message", faultException.Detail.Message?.ToString() },
+                                { "Crm Exception : Timestamp", faultException.Detail.Timestamp.ToString() },
+                                { "Crm Exception : Trace Text", faultException.Detail.TraceText?.ToString() }
+                            };
+                            Logger.LogException(faultException, exceptionDetails);
+                            Logger.LogFailure(faultException, item, jobName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogFailure(ex, item, jobName);
+                        }
+                        return context;
+                    },
+                    (context) =>
+                    {
+                        context.Proxy.Dispose();
                     }
-                    catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-                    {
-                        TransientIssueManager.ApplyDelay(e, Logger);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogFailure(ex, item, jobName);
-                    }
-
-                    // return the context to be re-used or to be 'closed' 
-                    return context;
-                },
-                (context) =>
-                {
-                    // final method per parition / task
-                    // this is only called when the thread partition is being shut down / closed / completed
-                    context.threadLocalProxy.Dispose();
-                });
+                );
 
                 stopwatch.Stop();
                 var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);

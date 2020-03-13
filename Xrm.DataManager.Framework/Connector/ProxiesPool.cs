@@ -1,11 +1,20 @@
-﻿using System;
-using System.ServiceModel.Description;
+﻿using Microsoft.Xrm.Client;
+using System;
+using System.Collections.Concurrent;
 using System.Threading;
 
 namespace Xrm.DataManager.Framework
 {
     public class ProxiesPool
     {
+        protected string ConnectionString
+        {
+            get; set;
+        }
+        protected ILogger Logger
+        {
+            get; set;
+        }
         public Uri InstanceUri
         {
             get; set;
@@ -21,23 +30,37 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
+        public ProxiesPool(string connectionString, ILogger logger)
+        {
+            ConnectionString = connectionString;
+            Logger = logger;
+            InstanceUri = CrmConnection.Parse(ConnectionString).ServiceUri;
+        }
+
+        // Maintain old auth mechanism for compatibility
+        // TODO : Remove old auth mechanism
         public ProxiesPool(Uri instanceUri, string userName, string password)
         {
             InstanceUri = instanceUri;
             UserName = userName;
             Password = password;
+
+            // Cleaning old URL
+            var instanceUrl = InstanceUri.ToString();
+            instanceUrl = instanceUrl.Replace(".api.", ".");
+            if (instanceUrl.Contains("/XRMServices/2011/"))
+            {
+                instanceUrl = instanceUrl.Remove(instanceUrl.IndexOf("/XRMServices/2011/"));
+            }
+
+            this.ConnectionString = $"AuthType=Office365;Url={instanceUrl};Username={UserName};Password={Password};";
         }
 
         public ManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
         {
-            var credentials = new ClientCredentials
-            {
-                UserName = { UserName = this.UserName, Password = this.Password }
-            };
-
             try
             {
-                var proxy = new ManagedTokenOrganizationServiceProxy(InstanceUri, credentials);
+                var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger);
                 return proxy;
             }
             catch (Exception ex)
