@@ -43,9 +43,16 @@ foreach($instance in $instances)
     $startIndex = $instanceName.LastIndexOf("/") + 1;
     $instanceName = $instanceName.Substring($startIndex, ($instanceName.Length - $startIndex));
     
+    $connectionString = 'AuthType=[AUTH];Url=[URL];Username=[LOGIN];Password=[PWD];';
+    $connectionString = $connectionString.Replace("[AUTH]", $authType);
+    $connectionString = $connectionString.Replace("[URL]", $instance.Url);    
+    $connectionString = $connectionString.Replace("[LOGIN]", $login);
+    $connectionString = $connectionString.Replace("[PWD]", $password);
+
     $instanceLineContent = [string]::Concat("<Instance Name=`"", $instanceName, 
         "`" UniqueName=`"",$instance.UniqueName, 
         "`" DisplayName=`"", $instance.FriendlyName, 
+        "`" ConnectionString=`"", $connectionString, 
         "`" Url=`"",$instance.OrganizationUrl, 
         "`" Login=`"",$login, 
         "`" Password=`"",$password,
