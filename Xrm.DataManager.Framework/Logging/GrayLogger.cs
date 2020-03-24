@@ -70,7 +70,6 @@ namespace Xrm.DataManager.Framework
 
         protected void LogInternal(string message, bool isError, Dictionary<string, string> properties)
         {
-            Console.WriteLine(message);
             if (LogLevel != GrayLogLevel.AllLogs && !isError)
             {
                 return;
@@ -106,6 +105,7 @@ namespace Xrm.DataManager.Framework
             {
                 message = $"{jobName} - {message}";
             }
+            Console.WriteLine(message);
             LogInternal(message, jobName);
         }
 
@@ -115,6 +115,7 @@ namespace Xrm.DataManager.Framework
         /// <param name="message"></param>
         public void LogDebug(string message)
         {
+            Console.WriteLine(message);
             LogInternal(message);
         }
 

@@ -3,6 +3,7 @@ using Microsoft.Xrm.Sdk.Query;
 using Microsoft.Xrm.Tooling.Connector;
 using System;
 using System.IdentityModel.Tokens;
+using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Security;
 
@@ -10,8 +11,25 @@ namespace Xrm.DataManager.Framework
 {
     public class ManagedTokenOrganizationServiceProxy : IOrganizationService, IDisposable
     {
-        private CrmServiceClient CrmServiceClient;
         private string CrmConnectionString;
+
+        public CrmServiceClient CrmServiceClient
+        {
+            get;
+            set;
+        }
+
+        public Guid CallerId
+        {
+            get;
+            set;
+        }
+
+        public string EndpointUrl
+        {
+            get;
+            set;
+        }
 
         protected ILogger Logger
         {
@@ -33,6 +51,8 @@ namespace Xrm.DataManager.Framework
                 Logger.LogMessage(CrmServiceClient.LastCrmError);
                 throw CrmServiceClient.LastCrmException;
             }
+            CallerId = CrmServiceClient.GetMyCrmUserId();
+            EndpointUrl = CrmServiceClient.ConnectedOrgPublishedEndpoints.Values.FirstOrDefault();
         }
 
         public Guid Create(Entity entity)
@@ -106,7 +126,7 @@ namespace Xrm.DataManager.Framework
                 CrmServiceClient.Delete(entityName, id);
             }
         }
-        
+
         public OrganizationResponse Execute(OrganizationRequest request)
         {
             try
