@@ -15,23 +15,27 @@ namespace Xrm.DataManager.Framework
         {
             get;
         }
-
-        public string CrmUserName => GetParameter<string>("Crm.User.Name");
-        public string CrmUserPassword => GetParameter<string>("Crm.User.Password");
-        public string CrmInstanceName => GetParameter<string>("Crm.Instance.Name");
-        public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);
-
         public string Jobs
         {
             get; set;
         }
-        public string JobNames => GetParameter<string>("Job.Names");
+
+        public string CrmUserName => GetMandatoryParameter<string>("Crm.User.Name");
+        public string CrmUserPassword => GetMandatoryParameter<string>("Crm.User.Password");
+        public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
+        public string JobNames => GetOptionalParameter<string>("Job.Names");
+        public string AppInsightsInstrumentationKey => GetOptionalParameter<string>("AppInsights.Instrumentation.Key");
+        public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 8);
+        public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
+        public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 10);
+        public string GrayLogUrl => GetOptionalParameter<string>("Graylog.Url");
+        public int GrayLogLevel => GetOptionalParameter<int>("Graylog.LogLevel", 0);
+
+
         public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
-        public string AppInsightsInstrumentationKey => GetParameter<string>("AppInsights.Instrumentation.Key");
+        public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);
         public bool ApplicationInsightsEnabled => (string.IsNullOrEmpty(AppInsightsInstrumentationKey) == false);
-        public int MaxRunDurationInHour => GetParameter<int>("Process.Duration.MaxHours");
-        public int QueryRecordLimit => GetParameter<int>("Process.Query.RecordLimit");
-        public int ThreadNumber => GetParameter<int>("Process.Thread.Number");
+        public bool GrayLogEnabled => (string.IsNullOrEmpty(GrayLogUrl) == false);
 
         const string DateFormat = "dd/MM/yyyy";
         static CultureInfo DateProvider = CultureInfo.InvariantCulture;
@@ -44,16 +48,27 @@ namespace Xrm.DataManager.Framework
             RunId = Utilities.GetRunId();
         }
 
+        public static T GetMandatoryParameter<T>(string key) => GetParameter<T>(key, default, true);
+        public static T GetOptionalParameter<T>(string key) => GetParameter<T>(key, default, false);
+        public static T GetOptionalParameter<T>(string key, T defaultValue) => GetParameter<T>(key, defaultValue, false);
+
         /// <summary>
         /// Get Parameter from App.Config
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public static T GetParameter<T>(string key)
+        private static T GetParameter<T>(string key, T defaultValue, bool isRequired = false)
         {
             if (!ConfigurationManager.AppSettings.AllKeys.Contains(key))
             {
-                throw new Exception($"Invalid configuration : setting '{key}' is missing in AppSettings section!");
+                if (isRequired)
+                {
+                    throw new Exception($"Invalid configuration : setting '{key}' is missing in AppSettings section!");
+                }
+                else
+                {
+                    return default;
+                }
             }
 
             var value = ConfigurationManager.AppSettings[key];

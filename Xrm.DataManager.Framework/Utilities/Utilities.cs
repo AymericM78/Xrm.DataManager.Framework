@@ -65,8 +65,11 @@ namespace Xrm.DataManager.Framework
             return new Dictionary<string, string>()
             {
                 { "Crm Organization name", jobSettings.CrmOrganizationName },
+                { "source", jobSettings.CrmOrganizationName },
                 { "Crm User name", jobSettings.CrmUserName },
+                { "USER", jobSettings.CrmUserName },
                 { "Run ID", runId },
+                { "CORRELATION_ID", runId },
                 { "Computer name", Environment.MachineName },
                 { "OS Version", Environment.OSVersion.Version.ToString() },
                 { "Local user name", Environment.UserName },

@@ -37,6 +37,10 @@ namespace Xrm.DataManager.Framework
             {
                 Logger = new TelemetryLogger(JobSettings, runId);
             }
+            else if(JobSettings.GrayLogEnabled)
+            {
+                Logger = new GrayLogger(JobSettings, runId);
+            }
             else
             {
                 Logger = new FileLogger(JobSettings, runId);
