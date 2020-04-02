@@ -2,7 +2,6 @@
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
@@ -30,9 +29,8 @@ namespace Xrm.DataManager.Framework
         /// <summary>
         /// Apply record modification
         /// </summary>
-        /// <param name="proxy"></param>
-        /// <param name="record"></param>
-        public abstract void ProcessRecord(ManagedTokenOrganizationServiceProxy proxy, Entity record);
+        /// <param name="context"></param>
+        public abstract void ProcessRecord(JobExecutionContext context);
 
         /// <summary>
         /// Run the job
@@ -47,22 +45,20 @@ namespace Xrm.DataManager.Framework
             query.NoLock = true;
             query.PageInfo = null;
 
-            var results = Utilities.TryRetrieveMultiple(ProxiesPool, Logger, query);
-            DateTime startTime = DateTime.Now;
+            var records = ProxiesPool.MainProxy.RetrieveMultiple(query).Entities;
+            var startTime = DateTime.Now;
             int totalProcessed = 0;
-
-            var data = PrepareData(results.Entities);
 
             // Initialize last result count to prevent infinite loop
             int lastRunCount = JobSettings.QueryRecordLimit;
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
-            while (data.Count() > 0)
+            while (records.Count > 0)
             {
                 var stopwatch = Stopwatch.StartNew();
-                Logger.LogMessage($"Retrieved {results.Entities.Count} records from CRM");
+                Logger.LogInformation($"Retrieved {records.Count} records from CRM");
 
                 Parallel.ForEach(
-                    data,
+                    records,
                     new ParallelOptions() { MaxDegreeOfParallelism = threads.Value },
                     () =>
                     {
@@ -74,27 +70,22 @@ namespace Xrm.DataManager.Framework
                     },
                     (item, loopState, context) =>
                     {
+                        var jobExecutionContext = new JobExecutionContext(context.Proxy, item);
+                        jobExecutionContext.PushMetrics(base.ContextProperties);
                         try
                         {
-                            ProcessRecord(context.Proxy, item);
-                            Logger.LogSuccess("Record processed with success!", item, jobName);
+                            ProcessRecord(jobExecutionContext);
+
+                            Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
                         }
                         catch (FaultException<OrganizationServiceFault> faultException)
                         {
-                            var exceptionDetails = new Dictionary<string, string>
-                            {
-                                { "Crm Exception : Activity Id", faultException.Detail.ActivityId.ToString() },
-                                { "Crm Exception : Error Code", faultException.Detail.ErrorCode.ToString() },
-                                { "Crm Exception : Message", faultException.Detail.Message?.ToString() },
-                                { "Crm Exception : Timestamp", faultException.Detail.Timestamp.ToString() },
-                                { "Crm Exception : Trace Text", faultException.Detail.TraceText?.ToString() }
-                            };
-                            Logger.LogException(faultException, exceptionDetails);
-                            Logger.LogFailure(faultException, item, jobName);
+                            var properties = jobExecutionContext.DumpMetrics().MergeWith(faultException.ExportProperties());
+                            Logger.LogFailure(faultException, properties);
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogFailure(ex, item, jobName);
+                            Logger.LogFailure(ex, jobExecutionContext.DumpMetrics());
                         }
                         return context;
                     },
@@ -105,39 +96,38 @@ namespace Xrm.DataManager.Framework
                 );
 
                 stopwatch.Stop();
-                var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);
-                Logger.LogMessage($"{results.Entities.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+                var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, records.Count);
+                Logger.LogInformation($"{records.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
 
-                totalProcessed += results.Entities.Count;
+                totalProcessed += records.Count;
                 var duration = (DateTime.Now - startTime);
-                Logger.LogMessage($"Total = {totalProcessed} records processed in {duration.ToString("g")}!");
+                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration.ToString("g")}!");
 
                 // If we have the same number of record processed in this round than the previous one, 
                 // that mean that we don't need to continue
-                if (lastRunCount < JobSettings.QueryRecordLimit && lastRunCount == results.Entities.Count)
+                if (lastRunCount < JobSettings.QueryRecordLimit && lastRunCount == records.Count)
                 {
-                    Logger.LogMessage("Operation completed! (Reason: Infinite loop detected)");
+                    Logger.LogInformation("Operation completed! (Reason: Infinite loop detected)");
                     return true;
                 }
 
                 // If job duration is greater or equal to execution limit, we can stop the process
                 if (duration.TotalHours >= JobSettings.MaxRunDurationInHour)
                 {
-                    Logger.LogMessage("Operation completed! (Reason: Max duration reached)");
+                    Logger.LogInformation("Operation completed! (Reason: Max duration reached)");
                     return true;
                 }
 
-                lastRunCount = results.Entities.Count;
+                lastRunCount = records.Count;
 
                 // Retrieve records for next round
-                results = Utilities.TryRetrieveMultiple(ProxiesPool, Logger, query);
-                data = PrepareData(results.Entities);
+                records = ProxiesPool.MainProxy.RetrieveMultiple(query).Entities;
             }
 
             // If the query return nothing, we have finished!
-            if (results.Entities.Count == 0)
+            if (records.Count == 0)
             {
-                Logger.LogMessage("Operation completed! (Reason: No more data to process)");
+                Logger.LogInformation("Operation completed! (Reason: No more data to process)");
                 return true;
             }
 

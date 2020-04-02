@@ -19,6 +19,20 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         public string ProgressFilePath => GetProgressFilePath();
 
+        private const int DefaultProgressDisplayStep = 100;
+        private int? overrideProgressDisplayStep;
+        protected virtual int? OverrideProgressDisplayStep
+        {
+            get
+            {
+                return overrideProgressDisplayStep;
+            }
+            set
+            {
+                overrideProgressDisplayStep = value;
+            }
+        }
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -43,13 +57,19 @@ namespace Xrm.DataManager.Framework
         /// <param name="callerId"></param>
         /// <returns></returns>
         public virtual QueryExpression GetQuery(Guid callerId) => throw new NotImplementedException();
+               
+        /// <summary>
+        /// Specify task to run after record retrieve operation in order to allow collection operation (ie grouping ...)
+        /// </summary>
+        /// <param name="records"></param>
+        /// <returns></returns>
+        public virtual IEnumerable<Entity> PrepareData(IEnumerable<Entity> records) => records;
 
         /// <summary>
         /// Apply record modification
         /// </summary>
-        /// <param name="proxy"></param>
-        /// <param name="record"></param>
-        public virtual void ProcessRecord(ManagedTokenOrganizationServiceProxy proxy, Entity record) => throw new NotImplementedException();
+        /// <param name="jobExecutionContext"></param>
+        public virtual void ProcessRecord(JobExecutionContext jobExecutionContext) => throw new NotImplementedException();
 
         /// <summary>
         /// Run the job
@@ -60,19 +80,19 @@ namespace Xrm.DataManager.Framework
         {
             var progressWriter = new MultiThreadFileWriter(ProgressFilePath);
 
-            Logger.LogMessage($"Checking {ProgressFilePath} existence...");
+            Logger.LogInformation($"Checking {ProgressFilePath} existence...");
             // Load already processed items from tracking file if exists
             var processedItems = new List<string>();
             if (File.Exists(ProgressFilePath))
             {
-                Logger.LogMessage($"File {ProgressFilePath} detected! Continue process at it last state");
+                Logger.LogInformation($"File {ProgressFilePath} detected! Continue process at it last state");
 
                 var lines = File.ReadAllLines(ProgressFilePath);
                 processedItems = lines.ToList();
             }
             else
             {
-                Logger.LogMessage($"File {ProgressFilePath} not detected! Start process from 0");
+                Logger.LogInformation($"File {ProgressFilePath} not detected! Start process from 0");
             }
 
             var jobName = GetName();
@@ -80,14 +100,14 @@ namespace Xrm.DataManager.Framework
             query.PageInfo.Count = JobSettings.QueryRecordLimit;
             query.NoLock = true;
 
-            var results = Utilities.TryRetrieveAll(ProxiesPool, Logger, query);
-            Logger.LogMessage($"Retrieved {results.Entities.Count} records from CRM");
+            var results = ProxiesPool.MainProxy.RetrieveAll(query);
+            Logger.LogInformation($"Retrieved {results.Entities.Count} records from CRM");
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
             var data = PrepareData(results.Entities);
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
-
+            var progressDisplayStep = (this.OverrideProgressDisplayStep.HasValue) ? this.OverrideProgressDisplayStep.Value : DefaultProgressDisplayStep;
             Parallel.ForEach(data, 
             new ParallelOptions()
             {
@@ -103,13 +123,16 @@ namespace Xrm.DataManager.Framework
             },
             (item, loopState, context) =>
             {
+                var jobExecutionContext = new JobExecutionContext(context.Proxy, item);
+                jobExecutionContext.PushMetrics(base.ContextProperties);
+
                 // Increment progress index
                 Interlocked.Increment(ref processedItemCount);
 
-                // Increment progress bar every 50 records
-                if (processedItemCount % 50 == 0)
+                // Increment progress bar every x records
+                if (processedItemCount % progressDisplayStep == 0)
                 {
-                    Logger.LogMessage($"Processing record {processedItemCount} / {results.Entities.Count}");
+                    Logger.LogInformation($"Processing record {processedItemCount} / {results.Entities.Count}");
                 }
 
                 // Exit if record has already been processed
@@ -120,28 +143,20 @@ namespace Xrm.DataManager.Framework
 
                 try
                 {
-                    ProcessRecord(context.Proxy, item);
-                    Logger.LogSuccess("Record processed with success!", item, jobName);
+                    ProcessRecord(jobExecutionContext);
+                    Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
 
                     // Track job progress
                     progressWriter.Write(item.Id.ToString());
                 }
                 catch (FaultException<OrganizationServiceFault> faultException)
                 {
-                    var exceptionDetails = new Dictionary<string, string>
-                    {
-                        { "Crm Exception : Activity Id", faultException.Detail.ActivityId.ToString() },
-                        { "Crm Exception : Error Code", faultException.Detail.ErrorCode.ToString() },
-                        { "Crm Exception : Message", faultException.Detail.Message?.ToString() },
-                        { "Crm Exception : Timestamp", faultException.Detail.Timestamp.ToString() },
-                        { "Crm Exception : Trace Text", faultException.Detail.TraceText?.ToString() }
-                    };
-                    Logger.LogException(faultException, exceptionDetails);
-                    Logger.LogFailure(faultException, item, jobName);
+                    var properties = jobExecutionContext.DumpMetrics().MergeWith(faultException.ExportProperties());
+                    Logger.LogFailure(faultException, properties);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogFailure(ex, item, jobName);
+                    Logger.LogFailure(ex, jobExecutionContext.DumpMetrics());
                 }
 
                 return context;
@@ -153,12 +168,12 @@ namespace Xrm.DataManager.Framework
 
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);
-            Logger.LogMessage($"{results.Entities.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+            Logger.LogInformation($"{results.Entities.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
 
             if (File.Exists(ProgressFilePath))
             {
                 File.Delete(ProgressFilePath);
-                Logger.LogMessage($"Progress file {ProgressFilePath} removed!");
+                Logger.LogInformation($"Progress file {ProgressFilePath} removed!");
             }
 
             return true;

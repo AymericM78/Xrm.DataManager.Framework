@@ -24,14 +24,14 @@ namespace Xrm.DataManager.Framework
         /// <returns></returns>
         public Instance InstanceSelect(List<Instance> instances)
         {
-            Logger.LogMessage($"Sélectionner l'instance cible : ");
+            Logger.LogDisplay($"Sélectionner l'instance cible : ");
             int i = 1;
             foreach (var instance in instances)
             {
-                Logger.LogMessage($" {i} : {instance.DisplayName}");
+                Logger.LogDisplay($" {i} : {instance.DisplayName}");
                 i++;
             }
-            Logger.LogDebug($"Choisir entre 1 et {instances.Count}");
+            Logger.LogDisplay($"Choisir entre 1 et {instances.Count}");
             var choice = Console.ReadLine();
             var index = int.Parse(choice);
             var selectedInstance = instances[index - 1];
@@ -50,15 +50,15 @@ namespace Xrm.DataManager.Framework
             var valid = false;
             while (!valid)
             {
-                Logger.LogMessage($"Sélectionner le traitement à réaliser : ");
+                Logger.LogDisplay($"Sélectionner le traitement à réaliser : ");
                 int i = 1;
                 orderedDataJobs = dataJobs.OrderBy(x => x.GetName().ToUpper().Contains("WEBJOB AZURE")).ThenBy(x => x.GetName());
                 foreach (var dataJob in orderedDataJobs)
                 {
-                    Logger.LogMessage($" {i} : {dataJob.GetName()}");
+                    Logger.LogDisplay($" {i} : {dataJob.GetName()}");
                     i++;
                 }
-                Logger.LogMessage($"Choisir entre 1 et {dataJobs.Count}");
+                Logger.LogDisplay($"Choisir entre 1 et {dataJobs.Count}");
                 var choice = Console.ReadLine();
                 if (int.TryParse(choice, out index) && index <= dataJobs.Count)
                 {
@@ -66,7 +66,7 @@ namespace Xrm.DataManager.Framework
                 }
                 else
                 {
-                    Logger.LogMessage($"Choix invalide");
+                    Logger.LogDisplay($"Choix invalide");
                 }
             }
             var selectedDataJob = orderedDataJobs.Skip(index - 1).First();

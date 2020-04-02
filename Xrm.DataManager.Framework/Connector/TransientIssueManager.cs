@@ -18,7 +18,7 @@ namespace Xrm.DataManager.Framework
             var delay = TimeSpan.FromSeconds(seconds);
 
             var currentThread = Thread.CurrentThread;
-            logger.LogMessage($"API Limit reached! Current thread '{currentThread.ManagedThreadId}' will wait during {delay.TotalSeconds}s!");
+            logger.LogInformation($"API Limit reached! Current thread '{currentThread.ManagedThreadId}' will wait during {delay.TotalSeconds}s!");
             Thread.Sleep(delay);
         }
 

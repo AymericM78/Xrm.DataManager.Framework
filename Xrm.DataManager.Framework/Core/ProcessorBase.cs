@@ -1,4 +1,4 @@
-using Microsoft.Crm.Sdk.Messages;
+
 
 using System;
 using System.Net;
@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Xrm.DataManager.Framework
 {
-    public class ProcessorBase
+    public abstract class ProcessorBase
     {
         protected JobSettings JobSettings
         {
@@ -32,22 +32,21 @@ namespace Xrm.DataManager.Framework
         public ProcessorBase()
         {
             JobSettings = new JobSettings();
-            string runId = Utilities.GetRunId();
             if (JobSettings.ApplicationInsightsEnabled)
             {
-                Logger = new TelemetryLogger(JobSettings, runId);
+                Logger = new ApplicationInsightLogger(JobSettings);
             }
-            else if(JobSettings.GrayLogEnabled)
+            else if (JobSettings.GrayLogEnabled)
             {
-                Logger = new GrayLogger(JobSettings, runId);
+                Logger = new GrayLogger(JobSettings);
             }
             else
             {
-                Logger = new FileLogger(JobSettings, runId);
+                Logger = new FileLogger(JobSettings);
             }
             ConsoleHelper = new ConsoleHelper(Logger);
 
-            Utilities.OutputContextInformation(JobSettings, runId, Logger);
+            Utilities.OutputContextInformation(JobSettings, Logger);
         }
 
         /// <summary>
@@ -63,17 +62,14 @@ namespace Xrm.DataManager.Framework
             //    throw new Exception("Execution is not allowed on production");
             //}
 
-            using (var proxy = ProxiesPool.GetProxy())
-            {
-                // Pre Operation
-                selectedDataJob.PreOperation(proxy);
+            // Pre Operation
+            selectedDataJob.PreOperation(ProxiesPool.MainProxy);
 
-                // Run the main process
-                selectedDataJob.Run();
+            // Run the main process
+            selectedDataJob.Run();
 
-                // Post Operation
-                selectedDataJob.PostOperation(proxy);
-            }
+            // Post Operation
+            selectedDataJob.PostOperation(ProxiesPool.MainProxy);
         }
 
         /// <summary>
@@ -81,7 +77,7 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         protected void InitializeOrganizationServiceManager(Instance instance)
         {
-            JobSettings.CrmOrganizationName = instance.UniqueName;
+            JobSettings.SelectedInstanceName = instance.UniqueName;
 
             if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
             {
@@ -89,20 +85,10 @@ namespace Xrm.DataManager.Framework
             }
             else
             {
-                // Maintain old auth mechanism for compatibility
-                // TODO : Remove old auth mechanism
-                var instanceUri = new Uri(instance.Url);
-                ProxiesPool = new ProxiesPool(instanceUri, JobSettings.CrmUserName, JobSettings.CrmUserPassword);
-            }
-
-            using (var proxy = ProxiesPool.GetProxy())
-            {
-                var request = new WhoAmIRequest();
-                var response = (WhoAmIResponse)proxy.Execute(request);
-                this.CallerId = response.UserId;
+                throw new Exception("ConnectionString attribute is not defined in instances.xml!");
             }
             ApplyConnectionOptimizations();
-            Logger.LogMessage($"Organization service initialized to {instance.DisplayName} with user {JobSettings.CrmUserName} [ID : {this.CallerId} - Url : {instance.Url}]!");
+            Logger.LogInformation($"Organization service initialized to {instance.DisplayName} with user {JobSettings.CrmUserName} [ID : {ProxiesPool.MainProxy.CallerId} - Url : {ProxiesPool.MainProxy.EndpointUrl}]!");
         }
 
         /// <summary>

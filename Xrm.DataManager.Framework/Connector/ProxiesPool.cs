@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xrm.Client;
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 
 namespace Xrm.DataManager.Framework
@@ -30,30 +29,24 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
+        public ManagedTokenOrganizationServiceProxy MainProxy
+        {
+            get;
+            private set;
+        }
+
         public ProxiesPool(string connectionString, ILogger logger)
         {
             ConnectionString = connectionString;
             Logger = logger;
             InstanceUri = CrmConnection.Parse(ConnectionString).ServiceUri;
+
+            InitializeMainProxy();
         }
 
-        // Maintain old auth mechanism for compatibility
-        // TODO : Remove old auth mechanism
-        public ProxiesPool(Uri instanceUri, string userName, string password)
+        private void InitializeMainProxy()
         {
-            InstanceUri = instanceUri;
-            UserName = userName;
-            Password = password;
-
-            // Cleaning old URL
-            var instanceUrl = InstanceUri.ToString();
-            instanceUrl = instanceUrl.Replace(".api.", ".");
-            if (instanceUrl.Contains("/XRMServices/2011/"))
-            {
-                instanceUrl = instanceUrl.Remove(instanceUrl.IndexOf("/XRMServices/2011/"));
-            }
-
-            this.ConnectionString = $"AuthType=Office365;Url={instanceUrl};Username={UserName};Password={Password};";
+            MainProxy = GetProxy();
         }
 
         public ManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)

@@ -7,13 +7,19 @@ namespace Xrm.DataManager.Framework
 {
     public class JobSettings
     {
-        public string CrmOrganizationName
+        public string SelectedInstanceName
         {
             get; set;
         }
+
+        public string SelectedJobName
+        {
+            get; set;
+        }
+
         public string RunId
         {
-            get;
+            get; set;
         }
         public string Jobs
         {
@@ -29,7 +35,7 @@ namespace Xrm.DataManager.Framework
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
         public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 10);
         public string GrayLogUrl => GetOptionalParameter<string>("Graylog.Url");
-        public int GrayLogLevel => GetOptionalParameter<int>("Graylog.LogLevel", 0);
+        public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
 
 
         public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
@@ -67,6 +73,10 @@ namespace Xrm.DataManager.Framework
                 }
                 else
                 {
+                    if (defaultValue != null)
+                    {
+                        return defaultValue;
+                    }
                     return default;
                 }
             }

@@ -36,10 +36,10 @@ namespace Xrm.DataManager.Framework
                 }
                 else
                 {
-                    JobSettings.CrmOrganizationName = args[0];
+                    JobSettings.SelectedInstanceName = args[0];
                     JobSettings.Jobs = args[1];
 
-                    selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.CrmOrganizationName);
+                    selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.SelectedInstanceName);
                 }
             }
 
@@ -88,17 +88,30 @@ namespace Xrm.DataManager.Framework
             {
                 foreach (var job in selectDataJobs)
                 {
-                    Logger.LogMessage($"Job start", job.GetName());
+                    JobSettings.SelectedJobName = job.GetName();
+                    Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}");
 
                     RunJob(job);
 
-                    Logger.LogMessage($"Job stop", job.GetName());
+                    Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}");
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogException(ex, new Dictionary<string, string>());
+                Logger.LogFailure(ex);
+                Console.WriteLine($"Catastrophic error {ex.Message}!");
                 throw ex;
+            }
+            finally
+            {
+                try
+                {
+                    ProxiesPool.MainProxy.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to dispose MainProxy: {ex.Message}!");
+                }
             }
 
 #if DEBUG

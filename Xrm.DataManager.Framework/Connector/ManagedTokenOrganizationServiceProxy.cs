@@ -48,7 +48,7 @@ namespace Xrm.DataManager.Framework
             CrmServiceClient = new CrmServiceClient(CrmConnectionString);
             if (CrmServiceClient.LastCrmException != null)
             {
-                Logger.LogMessage(CrmServiceClient.LastCrmError);
+                Logger.LogInformation($"Failed to connect to CRM => {CrmServiceClient.LastCrmError}!");
                 throw CrmServiceClient.LastCrmException;
             }
             CallerId = CrmServiceClient.GetMyCrmUserId();
@@ -185,7 +185,8 @@ namespace Xrm.DataManager.Framework
         {
             try
             {
-                return CrmServiceClient.RetrieveMultiple(query);
+                var results = CrmServiceClient.RetrieveMultiple(query);
+                return results;
             }
             catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
             {
@@ -197,6 +198,28 @@ namespace Xrm.DataManager.Framework
                 TransientIssueManager.ApplyDelay(e, Logger);
                 return CrmServiceClient.RetrieveMultiple(query);
             }
+        }
+
+        /// <summary>
+        /// Run query expression with retry and pagination
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        public EntityCollection RetrieveAll(QueryExpression query)
+        {
+            var results = new EntityCollection();
+            query.PageInfo.PageNumber = 1;
+
+            var moreRecords = true;
+            while (moreRecords)
+            {
+                var pageResults = RetrieveMultiple(query);
+                results.Entities.AddRange(pageResults.Entities);
+                query.PageInfo.PagingCookie = pageResults.PagingCookie;
+                query.PageInfo.PageNumber++;
+                moreRecords = pageResults.MoreRecords;
+            }
+            return results;
         }
 
         public void Dispose() => CrmServiceClient.Dispose();

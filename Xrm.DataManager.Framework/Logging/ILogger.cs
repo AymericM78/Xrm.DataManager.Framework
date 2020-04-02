@@ -1,4 +1,3 @@
-using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
 
@@ -6,11 +5,16 @@ namespace Xrm.DataManager.Framework
 {
     public interface ILogger
     {
-        void LogDebug(string message);
-        void LogEvent(string name, Dictionary<string, string> properties, string jobName = null);
-        void LogException(Exception exception, Dictionary<string, string> properties, string jobName = null);
-        void LogFailure(Exception ex, Entity crmRecord, string jobName);
-        void LogMessage(string message, string jobName = null);
-        void LogSuccess(string eventName, Entity crmRecord, string jobName);
+        void LogVerbose(string message);
+
+        void LogDisplay(string message);
+
+        void LogInformation(string message);
+
+        void LogSuccess(string message, Dictionary<string, string> properties);
+
+        void LogFailure(Exception exception);
+
+        void LogFailure(Exception exception, Dictionary<string, string> properties);
     }
 }

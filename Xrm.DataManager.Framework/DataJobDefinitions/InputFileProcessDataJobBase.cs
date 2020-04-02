@@ -38,7 +38,7 @@ namespace Xrm.DataManager.Framework
 
         public virtual char[] GetInputFileSeparator() => new[] { ',', ';' };
 
-        public virtual void ProcessRecord(ManagedTokenOrganizationServiceProxy proxy, Entity record, string[] lineData) => throw new NotImplementedException();
+        public virtual void ProcessRecord(JobExecutionContext context, string[] lineData) => throw new NotImplementedException();
 
         public virtual Entity SearchRecord(ManagedTokenOrganizationServiceProxy proxy, string[] lineData) => throw new NotImplementedException();
 
@@ -59,7 +59,7 @@ namespace Xrm.DataManager.Framework
                 var fileLines = File.ReadAllLines(GetPivotFilePath());
                 lines = fileLines.ToList();
 
-                Logger.LogMessage($"Retrieved {lines.Count} from file {GetPivotFilePath()}");
+                Logger.LogInformation($"Retrieved {lines.Count} from file {GetPivotFilePath()}");
             }
             else
             {
@@ -67,7 +67,7 @@ namespace Xrm.DataManager.Framework
                 var fileLines = File.ReadAllLines(GetInputFilePath());
                 lines = fileLines.ToList();
 
-                Logger.LogMessage($"Retrieved {lines.Count} from file {GetInputFilePath()}");
+                Logger.LogInformation($"Retrieved {lines.Count} from file {GetInputFilePath()}");
 
                 // Create pivot file that track progress and outcome
                 var header = lines.First();
@@ -100,12 +100,15 @@ namespace Xrm.DataManager.Framework
                         Proxy = proxy
                     };
                 },
-                (item, loopState, context) =>
+                (line, loopState, context) =>
                 {
+                    var jobExecutionContext = new JobExecutionContext(context.Proxy);
+                    jobExecutionContext.PushMetrics(base.ContextProperties);
+
                     // Increment progress index
                     Interlocked.Increment(ref processedItemCount);
 
-                    var isPivotLine = item.Contains(PivotUniqueMarker);
+                    var isPivotLine = line.Contains(PivotUniqueMarker);
                     if (isPivotLine)
                     {
                         // TODO : Handle already processed pivot lines to replay errors
@@ -114,15 +117,16 @@ namespace Xrm.DataManager.Framework
                     Entity record = null;
                     try
                     {
-                        var lineData = item.Split(GetInputFileSeparator(), StringSplitOptions.RemoveEmptyEntries);
+                        var lineData = line.Split(GetInputFileSeparator(), StringSplitOptions.RemoveEmptyEntries);
 
                         // Retrieve CRM record based on current line
                         record = SearchRecord(context.Proxy, lineData);
-                        ProcessRecord(context.Proxy, record, lineData);
-                        Logger.LogSuccess("Record processed with success!", record, jobName);
+                        jobExecutionContext.PushRecordToMetrics(record);
+                        ProcessRecord(jobExecutionContext, lineData);
+                        Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
 
                         // Track progress and outcome
-                        var pivotLine = string.Concat(item,
+                        var pivotLine = string.Concat(line,
                         defaultFileSeparator, PivotUniqueMarker,
                         defaultFileSeparator, record.Id.ToString() /* RecordId */,
                         defaultFileSeparator, "OK" /* Outcome */,
@@ -132,19 +136,11 @@ namespace Xrm.DataManager.Framework
                     }
                     catch (FaultException<OrganizationServiceFault> faultException)
                     {
-                        var exceptionDetails = new Dictionary<string, string>
-                            {
-                                { "Crm Exception : Activity Id", faultException.Detail.ActivityId.ToString() },
-                                { "Crm Exception : Error Code", faultException.Detail.ErrorCode.ToString() },
-                                { "Crm Exception : Message", faultException.Detail.Message?.ToString() },
-                                { "Crm Exception : Timestamp", faultException.Detail.Timestamp.ToString() },
-                                { "Crm Exception : Trace Text", faultException.Detail.TraceText?.ToString() }
-                            };
-                        Logger.LogException(faultException, exceptionDetails);
-                        Logger.LogFailure(faultException, record, jobName);
+                        var properties = jobExecutionContext.DumpMetrics().MergeWith(faultException.ExportProperties());
+                        Logger.LogFailure(faultException, properties);
 
                         // Track progress and outcome
-                        var pivotLine = string.Concat(item,
+                        var pivotLine = string.Concat(line,
                         defaultFileSeparator, PivotUniqueMarker,
                         defaultFileSeparator, record?.Id.ToString() /* RecordId */,
                         defaultFileSeparator, "KO" /* Outcome */,
@@ -154,10 +150,10 @@ namespace Xrm.DataManager.Framework
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogFailure(ex, record, jobName);
+                        Logger.LogFailure(ex, jobExecutionContext.DumpMetrics());
 
                         // Track progress and outcome
-                        var pivotLine = string.Concat(item,
+                        var pivotLine = string.Concat(line,
                         defaultFileSeparator, PivotUniqueMarker,
                         defaultFileSeparator, record?.Id.ToString() /* RecordId */,
                         defaultFileSeparator, "KO" /* Outcome */,
@@ -173,7 +169,7 @@ namespace Xrm.DataManager.Framework
                 });
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, lines.Count);
-            Logger.LogMessage($"{lines.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+            Logger.LogInformation($"{lines.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
 
             return true;
         }

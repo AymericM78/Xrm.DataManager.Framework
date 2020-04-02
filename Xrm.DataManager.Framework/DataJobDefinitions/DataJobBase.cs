@@ -6,46 +6,39 @@ namespace Xrm.DataManager.Framework
 {
     public abstract class DataJobBase
     {
+        protected Dictionary<string, object> JobProperties { get; set; } = new Dictionary<string, object>();
+        protected Dictionary<string, string> ContextProperties { get; set; } = new Dictionary<string, string>();
+
         protected JobSettings JobSettings
         {
             get;
         }
-        protected Dictionary<string, object> JobProperties { get; set; } = new Dictionary<string, object>();
+
         protected ProxiesPool ProxiesPool
         {
             get;
         }
+
         protected ConsoleHelper ConsoleHelper
         {
             get;
         }
+
         protected ILogger Logger
         {
             get;
         }
+
         protected Guid CallerId
         {
             get;
         }
 
         private int? overrideThreadNumber;
-        private static readonly object padlock = new object();
         protected virtual int? OverrideThreadNumber
         {
-            get
-            {
-                lock (padlock)
-                {
-                    return overrideThreadNumber;
-                }
-            }
-            set
-            {
-                lock (padlock)
-                {
-                    overrideThreadNumber = value;
-                }
-            }
+            get => overrideThreadNumber;
+            set => overrideThreadNumber = value;
         }
 
         /// <summary>
@@ -59,6 +52,8 @@ namespace Xrm.DataManager.Framework
             Logger = parameters.Logger;
             CallerId = parameters.CallerId;
             ConsoleHelper = new ConsoleHelper(Logger);
+
+            ContextProperties = Utilities.GetContextProperties(JobSettings);
         }
 
         /// <summary>
@@ -85,13 +80,6 @@ namespace Xrm.DataManager.Framework
         {
             // Nothing to do here
         }
-
-        /// <summary>
-        /// Specify task to run after record retrieve operation in order to allow collection operation (ie grouping ...)
-        /// </summary>
-        /// <param name="records"></param>
-        /// <returns></returns>
-        public virtual IEnumerable<Entity> PrepareData(IEnumerable<Entity> records) => records;
 
         /// <summary>
         /// Specify task to run after record processing
