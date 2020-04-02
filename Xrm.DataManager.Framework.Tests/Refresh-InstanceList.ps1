@@ -52,10 +52,7 @@ foreach($instance in $instances)
     $instanceLineContent = [string]::Concat("<Instance Name=`"", $instanceName, 
         "`" UniqueName=`"",$instance.UniqueName, 
         "`" DisplayName=`"", $instance.FriendlyName, 
-        "`" ConnectionString=`"", $connectionString, 
-        "`" Url=`"",$instance.OrganizationUrl, 
-        "`" Login=`"",$login, 
-        "`" Password=`"",$password,
+        "`" ConnectionString=`"", $connectionString,
         "`" />");
 
     $output.AppendLine($instanceLineContent) | Out-Null;
