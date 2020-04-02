@@ -3,10 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-
+/Nuget
 Instances.xml
 NugetPackage.bat
 Settings.config
+**/[Nn]u[Gg]et/*
 
 # User-specific files
 *.rsuser
