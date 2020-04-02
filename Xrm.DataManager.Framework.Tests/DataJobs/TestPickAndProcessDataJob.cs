@@ -1,6 +1,4 @@
-﻿using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
-using Xrm.DataManager.Framework;
+﻿using Microsoft.Xrm.Sdk.Query;
 using System;
 
 namespace Xrm.DataManager.Framework.Tests
@@ -12,33 +10,36 @@ namespace Xrm.DataManager.Framework.Tests
 
         }
 
-        public override string GetName() => "PickAndProcess Test";
+        private const string DomainExtension = ".com";
+
+        public override string GetName() => "PickAndProcess Test - Replace contact email by @....fake";
+
+        protected override int? OverrideThreadNumber => 1;
 
         public override QueryExpression GetQuery(Guid callerId)
         {
-            var query = new QueryExpression("asyncoperation")
-            {
-                ColumnSet = new ColumnSet()
-            };
-            query.Criteria.AddCondition("createdon", ConditionOperator.OlderThanXDays, 20);
-
-            // Asynch operation is completed
-            var filterStatus = query.Criteria.AddFilter(LogicalOperator.Or);
-            filterStatus.AddCondition("statecode", ConditionOperator.Equal, 3);
-
-            // Or asynch operation has failed and is waiting for nothing
-            var filterWaitingInFailure = filterStatus.AddFilter(LogicalOperator.And);
-            filterWaitingInFailure.AddCondition("statuscode", ConditionOperator.Equal, 10);
-            filterWaitingInFailure.AddCondition("friendlymessage", ConditionOperator.NotNull);
-
-            query.AddOrder("createdon", OrderType.Ascending);
+            var query = new QueryExpression("contact");
+            query.ColumnSet.AllColumns = true;
+            query.Criteria.AddCondition("emailaddress1", ConditionOperator.EndsWith, DomainExtension);
             query.NoLock = true;
             return query;
         }
 
-        public override void ProcessRecord(ManagedTokenOrganizationServiceProxy proxy, Entity record)
+        public override void ProcessRecord(JobExecutionContext context)
         {
-            proxy.Delete(record.LogicalName, record.Id);
+            var proxy = context.Proxy;
+            var record = context.Record;
+            
+            var email = record.GetAttributeValue<string>("emailaddress1");
+            context.PushMetric("Email avant", email);
+
+            email = email.ToLowerInvariant();
+            email = email.Replace(DomainExtension, ".fake");
+
+            context.PushMetric("Email apres", email);
+
+            record["emailaddress1"] = email;
+            proxy.Update(context.Record);
         }
     }
 }
