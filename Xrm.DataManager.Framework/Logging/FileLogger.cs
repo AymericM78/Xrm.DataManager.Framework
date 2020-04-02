@@ -14,7 +14,7 @@ namespace Xrm.DataManager.Framework
             JobSettings = jobSettings;
 
             var loggerConfiguration = new LoggerConfiguration()
-                .WriteTo.Console(Serilog.Events.LogEventLevel.Information)
+                .WriteTo.Console(Serilog.Events.LogEventLevel.Error)
                 .WriteTo.File($"{jobSettings.RunId}.log");
 
             if (LogLevel == LogLevel.Verbose)
@@ -47,7 +47,6 @@ namespace Xrm.DataManager.Framework
                 return;
             }
             Log.Verbose(message);
-            Console.WriteLine(message);
         }
 
         /// <summary>
@@ -55,7 +54,6 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         public override void LogInformation(string message)
         {
-            Console.WriteLine(message);
             if (LogLevel > LogLevel.Information)
             {
                 return;
