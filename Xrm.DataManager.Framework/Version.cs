@@ -1,5 +1,5 @@
 
 internal static class Version
 {
-    public const string VersionNumber = "2020.03.31.1130";
+    public const string VersionNumber = "2020.04.17.1930";
 }

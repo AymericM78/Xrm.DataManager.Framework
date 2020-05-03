@@ -1,5 +1,4 @@
-﻿using Microsoft.Xrm.Client;
-using System;
+﻿using System;
 using System.Threading;
 
 namespace Xrm.DataManager.Framework
