@@ -38,9 +38,32 @@ namespace Xrm.DataManager.Framework
         {
             ConnectionString = connectionString;
             Logger = logger;
-            InstanceUri = CrmConnection.Parse(ConnectionString).ServiceUri;
+            InstanceUri = new Uri(ExtractUrlFromConnectionString(connectionString));
 
             InitializeMainProxy();
+        }
+
+        private string ExtractUrlFromConnectionString(string connectionString)
+        {
+            if (!connectionString.Contains("Url="))
+            {
+                throw new ArgumentException($"Crm connectionstring is invalid : url parameter is not provided! '{connectionString}'");
+            }
+
+            var parameters = connectionString.Split(';');
+            foreach (var parameter in parameters)
+            {
+                var keyValue = parameter.Split('=');
+                if (string.IsNullOrEmpty(keyValue[0]))
+                    continue;
+
+                var paramKey = keyValue[0].Trim();
+                if (paramKey == "Url")
+                {
+                    return keyValue[1].Trim();
+                }
+            }
+            return null;
         }
 
         private void InitializeMainProxy()
