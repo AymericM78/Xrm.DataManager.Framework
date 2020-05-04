@@ -52,8 +52,13 @@ namespace Xrm.DataManager.Framework
         /// <summary>
         /// Log information to file
         /// </summary>
-        public override void LogInformation(string message)
+        public override void LogInformation(string message, bool display = true)
         {
+            if (display)
+            {
+                LogDisplay(message);
+            }
+
             if (LogLevel > LogLevel.Information)
             {
                 return;

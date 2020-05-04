@@ -15,7 +15,7 @@ namespace Xrm.DataManager.Framework
         public static string GetRunId()
         {
             var now = DateTime.Now;
-            return $"Run-{now.ToString("yyyy-MM-dd--HH-mm-ss") }";
+            return $"Run-{now:yyyy-MM-dd--HH-mm-ss}";
         }
 
         /// <summary>

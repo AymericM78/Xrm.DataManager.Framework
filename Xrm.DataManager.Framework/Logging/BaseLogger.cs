@@ -36,7 +36,7 @@ namespace Xrm.DataManager.Framework
 
         public abstract void LogFailure(Exception exception, Dictionary<string, string> properties);
 
-        public abstract void LogInformation(string message);
+        public abstract void LogInformation(string message, bool display = true);
 
         public abstract void LogSuccess(string message, Dictionary<string, string> properties);
 

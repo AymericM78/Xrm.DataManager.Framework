@@ -9,7 +9,7 @@ namespace Xrm.DataManager.Framework
 
         void LogDisplay(string message);
 
-        void LogInformation(string message);
+        void LogInformation(string message, bool display = true);
 
         void LogSuccess(string message, Dictionary<string, string> properties);
 

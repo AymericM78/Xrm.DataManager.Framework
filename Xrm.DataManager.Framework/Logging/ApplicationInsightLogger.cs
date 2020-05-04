@@ -39,9 +39,12 @@ namespace Xrm.DataManager.Framework
             Console.WriteLine(message);
         }
 
-        public override void LogInformation(string message)
+        public override void LogInformation(string message, bool display = true)
         {
-            Console.WriteLine(message);
+            if (display)
+            {
+                LogDisplay(message);
+            }
             if (LogLevel > LogLevel.Information)
             {
                 return;
