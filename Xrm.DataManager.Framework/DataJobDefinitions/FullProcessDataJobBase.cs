@@ -105,6 +105,8 @@ namespace Xrm.DataManager.Framework
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
             var data = PrepareData(results.Entities);
+            var dataCount = data.Count();
+            Logger.LogInformation($"{dataCount} records to process");
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
             var progressDisplayStep = (this.OverrideProgressDisplayStep.HasValue) ? this.OverrideProgressDisplayStep.Value : DefaultProgressDisplayStep;
@@ -132,7 +134,7 @@ namespace Xrm.DataManager.Framework
                 // Increment progress bar every x records
                 if (processedItemCount % progressDisplayStep == 0)
                 {
-                    Logger.LogInformation($"Processing record {processedItemCount} / {results.Entities.Count}");
+                    Logger.LogInformation($"Processing record {processedItemCount} / {dataCount}");
                 }
 
                 // Exit if record has already been processed
@@ -168,7 +170,7 @@ namespace Xrm.DataManager.Framework
 
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);
-            Logger.LogInformation($"{results.Entities.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+            Logger.LogInformation($"{dataCount} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed}]!");
 
             if (File.Exists(ProgressFilePath))
             {

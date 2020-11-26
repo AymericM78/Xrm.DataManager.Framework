@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xrm.DataManager.Framework
@@ -47,15 +48,23 @@ namespace Xrm.DataManager.Framework
 
             var records = ProxiesPool.MainProxy.RetrieveMultiple(query).Entities;
             var startTime = DateTime.Now;
-            int totalProcessed = 0;
 
             // Initialize last result count to prevent infinite loop
             int lastRunCount = JobSettings.QueryRecordLimit;
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
+
+            int totalProcessed = 0;
+            int totalSuccess = 0;
+            int totalFailures = 0;
+
             while (records.Count > 0)
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation($"Retrieved {records.Count} records from CRM");
+
+                int currentProcessed = 0;
+                int currentSuccess = 0;
+                int currentFailures = 0;
 
                 Parallel.ForEach(
                     records,
@@ -72,19 +81,28 @@ namespace Xrm.DataManager.Framework
                     {
                         var jobExecutionContext = new JobExecutionContext(context.Proxy, item);
                         jobExecutionContext.PushMetrics(base.ContextProperties);
+
                         try
                         {
+                            Interlocked.Increment(ref totalProcessed);
+                            Interlocked.Increment(ref currentProcessed);
                             ProcessRecord(jobExecutionContext);
 
+                            Interlocked.Increment(ref totalSuccess);
+                            Interlocked.Increment(ref currentSuccess);
                             Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
                         }
                         catch (FaultException<OrganizationServiceFault> faultException)
                         {
                             var properties = jobExecutionContext.DumpMetrics().MergeWith(faultException.ExportProperties());
+                            Interlocked.Increment(ref totalFailures);
+                            Interlocked.Increment(ref currentFailures);
                             Logger.LogFailure(faultException, properties);
                         }
                         catch (Exception ex)
                         {
+                            Interlocked.Increment(ref totalFailures);
+                            Interlocked.Increment(ref currentFailures);
                             Logger.LogFailure(ex, jobExecutionContext.DumpMetrics());
                         }
                         return context;
@@ -97,11 +115,11 @@ namespace Xrm.DataManager.Framework
 
                 stopwatch.Stop();
                 var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, records.Count);
-                Logger.LogInformation($"{records.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+                Logger.LogInformation($"{currentProcessed} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures {currentFailures}]!");
 
-                totalProcessed += records.Count;
                 var duration = (DateTime.Now - startTime);
-                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration.ToString("g")}!");
+                var globalSpeed = Utilities.GetSpeed(duration.TotalMilliseconds, totalProcessed);
+                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures {totalFailures}]");
 
                 // If we have the same number of record processed in this round than the previous one, 
                 // that mean that we don't need to continue

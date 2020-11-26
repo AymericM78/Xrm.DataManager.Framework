@@ -14,8 +14,6 @@ namespace Xrm.DataManager.Framework.Tests
 
         public override string GetName() => "PickAndProcess Test - Replace contact email by @....fake";
 
-        protected override int? OverrideThreadNumber => 1;
-
         public override QueryExpression GetQuery(Guid callerId)
         {
             var query = new QueryExpression("contact");
