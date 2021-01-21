@@ -88,12 +88,7 @@ namespace Xrm.DataManager.Framework
             {
                 foreach (var job in selectDataJobs)
                 {
-                    JobSettings.SelectedJobName = job.GetName();
-                    Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}");
-
                     RunJob(job);
-
-                    Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}");
                 }
             }
             catch (Exception ex)

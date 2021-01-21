@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml.Serialization;
 
 namespace Xrm.DataManager.Framework
 {
+    [Obsolete("You must use connection string with oAuth.")]
     [XmlRoot("Instances")]
     public class InstanceList
     {

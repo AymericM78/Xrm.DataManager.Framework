@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
 
 namespace Xrm.DataManager.Framework
 {
+    [Obsolete("You must use connection string with oAuth.")]
     public static class InstancePicker
     {
         /// <summary>

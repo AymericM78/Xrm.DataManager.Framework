@@ -26,9 +26,15 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
-        public string CrmUserName => GetMandatoryParameter<string>("Crm.User.Name");
-        public string CrmUserPassword => GetMandatoryParameter<string>("Crm.User.Password");
+        public string CrmConnectionString => GetOptionalParameter<string>("Crm.ConnectionString");
+
+        [Obsolete("You must use connection string with oAuth.")]
+        public string CrmUserName => GetOptionalParameter<string>("Crm.User.Name");
+        [Obsolete("You must use connection string with oAuth.")]
+        public string CrmUserPassword => GetOptionalParameter<string>("Crm.User.Password");
+        [Obsolete("You must use connection string with oAuth.")]
         public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
+
         public string JobNames => GetOptionalParameter<string>("Job.Names");
         public string AppInsightsInstrumentationKey => GetOptionalParameter<string>("AppInsights.Instrumentation.Key");
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 8);
@@ -37,6 +43,8 @@ namespace Xrm.DataManager.Framework
         public string GrayLogUrl => GetOptionalParameter<string>("Graylog.Url");
         public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
 
+
+        public bool ConnectionStringDefined => (string.IsNullOrEmpty(CrmConnectionString) == false);
 
         public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
         public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);

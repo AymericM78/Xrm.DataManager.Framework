@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 
 namespace Xrm.DataManager.Framework
 {

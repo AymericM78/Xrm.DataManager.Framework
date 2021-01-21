@@ -3,6 +3,7 @@ using System.Xml.Serialization;
 
 namespace Xrm.DataManager.Framework
 {
+    [Obsolete("You must use connection string with oAuth.")]
     [Serializable()]
     public class Instance
     {

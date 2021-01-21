@@ -1,8 +1,6 @@
 
 
 using System;
-using System.Net;
-using System.Threading;
 
 namespace Xrm.DataManager.Framework
 {
@@ -62,6 +60,9 @@ namespace Xrm.DataManager.Framework
             //    throw new Exception("Execution is not allowed on production");
             //}
 
+            JobSettings.SelectedJobName = selectedDataJob.GetName();
+            Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}");
+
             // Pre Operation
             selectedDataJob.PreOperation(ProxiesPool.MainProxy);
 
@@ -70,54 +71,34 @@ namespace Xrm.DataManager.Framework
 
             // Post Operation
             selectedDataJob.PostOperation(ProxiesPool.MainProxy);
+            Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}");
         }
 
         /// <summary>
         /// Initialize Organization client for D365 integration
         /// </summary>
-        protected void InitializeOrganizationServiceManager(Instance instance)
+        protected void InitializeOrganizationServiceManager(Instance instance = null)
         {
-            JobSettings.SelectedInstanceName = instance.UniqueName;
-
-            if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
+            if (JobSettings.ConnectionStringDefined)
             {
-                ProxiesPool = new ProxiesPool(instance.ConnectionString, this.Logger);
+                ProxiesPool = new ProxiesPool(JobSettings.CrmConnectionString, this.Logger);
+                Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");
             }
             else
             {
-                throw new Exception("ConnectionString attribute is not defined in instances.xml!");
-            }
-            ApplyConnectionOptimizations();
-            Logger.LogInformation($"Organization service initialized to {instance.DisplayName} with user {JobSettings.CrmUserName} [ID : {ProxiesPool.MainProxy.CallerId} - Url : {ProxiesPool.MainProxy.EndpointUrl}]!");
-        }
-
-        /// <summary>
-        /// Optimize connection performances
-        /// </summary>
-        protected void ApplyConnectionOptimizations()
-        {
-            // If you're using an old version of .NET this will enable TLS 1.2
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
-            // Change max connections from .NET to a remote service default: 2
-            ServicePointManager.DefaultConnectionLimit = 85;
-
-            // Bump up the min threads reserved for this app to ramp connections faster - minWorkerThreads defaults to 4, minIOCP defaults to 4 
-            ThreadPool.SetMinThreads(10, 10);
-
-            // Turn off the Expect 100 to continue message - 'true' will cause the caller to wait until it round-trip confirms a connection to the server 
-            ServicePointManager.Expect100Continue = false;
-
-            // More info on Nagle at WikiPedia - can help perf (helps w/ conn reliability)
-            ServicePointManager.UseNagleAlgorithm = false;
-
-            //a new twist to existing connections
-            var knownServicePointConnection = ServicePointManager.FindServicePoint(ProxiesPool.InstanceUri);
-            if (knownServicePointConnection != null)
-            {
-                knownServicePointConnection.ConnectionLimit = ServicePointManager.DefaultConnectionLimit;
-                knownServicePointConnection.Expect100Continue = ServicePointManager.Expect100Continue;
-                knownServicePointConnection.UseNagleAlgorithm = ServicePointManager.UseNagleAlgorithm;
+                if (instance != null)
+                {
+                    JobSettings.SelectedInstanceName = instance.UniqueName;
+                    if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
+                    {
+                        ProxiesPool = new ProxiesPool(instance.ConnectionString, this.Logger);
+                        Logger.LogInformation($"Organization service initialized to {instance.DisplayName} with user {JobSettings.CrmUserName} [ID : {ProxiesPool.MainProxy.CallerId} - Url : {ProxiesPool.MainProxy.EndpointUrl}]!");
+                    }
+                    else
+                    {
+                        throw new Exception("ConnectionString attribute is not defined in instances.xml!");
+                    }
+                }
             }
         }
     }
