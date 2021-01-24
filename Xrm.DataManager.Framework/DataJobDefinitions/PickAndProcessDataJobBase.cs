@@ -85,6 +85,7 @@ namespace Xrm.DataManager.Framework
                         {
                             Interlocked.Increment(ref totalProcessed);
                             Interlocked.Increment(ref currentProcessed);
+
                             ProcessRecord(jobExecutionContext);
 
                             Interlocked.Increment(ref totalSuccess);
@@ -114,11 +115,11 @@ namespace Xrm.DataManager.Framework
 
                 stopwatch.Stop();
                 var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, records.Count);
-                Logger.LogInformation($"{currentProcessed} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures {currentFailures}]!");
+                Logger.LogInformation($"{currentProcessed} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures = {currentFailures}]!");
 
                 var duration = (DateTime.Now - startTime);
                 var globalSpeed = Utilities.GetSpeed(duration.TotalMilliseconds, totalProcessed);
-                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures {totalFailures}]");
+                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures = {totalFailures}]");
 
                 // If we have the same number of record processed in this round than the previous one, 
                 // that mean that we don't need to continue
@@ -132,6 +133,13 @@ namespace Xrm.DataManager.Framework
                 if (duration.TotalHours >= JobSettings.MaxRunDurationInHour)
                 {
                     Logger.LogInformation("Operation completed! (Reason: Max duration reached)");
+                    return true;
+                }
+
+                // If we have only errors, we must stop
+                if (lastRunCount == records.Count)
+                {
+                    Logger.LogInformation("Operation failed! (Reason: Too many errors detected)");
                     return true;
                 }
 

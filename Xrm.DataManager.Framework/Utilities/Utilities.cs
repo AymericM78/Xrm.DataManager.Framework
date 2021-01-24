@@ -47,6 +47,7 @@ namespace Xrm.DataManager.Framework
         {
             var contextProperties = new Dictionary<string, string>()
             {
+                { "Context.Crm.ConnectionString", jobSettings.CrmConnectionString },
                 { "Context.Crm.Instance.Name", jobSettings.SelectedInstanceName },
                 { "Context.Crm.User.Name", jobSettings.CrmUserName },
                 { "Context.Job.Name", jobSettings.SelectedJobName },

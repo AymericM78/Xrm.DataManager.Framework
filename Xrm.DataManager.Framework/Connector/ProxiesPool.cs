@@ -41,8 +41,8 @@ namespace Xrm.DataManager.Framework
             Logger = logger;
             InstanceUri = new Uri(ExtractUrlFromConnectionString(connectionString));
 
-            ApplyConnectionOptimizations();
             InitializeMainProxy();
+            ApplyConnectionOptimizations();
         }
 
         private string ExtractUrlFromConnectionString(string connectionString)
@@ -70,27 +70,21 @@ namespace Xrm.DataManager.Framework
 
         private void InitializeMainProxy()
         {
-            MainProxy = GetProxy();
+            MainProxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, Guid.Empty);
+
+            if (MainProxy.CrmServiceClient.LastCrmException != null)
+            {
+                Logger.LogInformation($"Failed to connect to CRM => {MainProxy.CrmServiceClient.LastCrmError}!");
+                throw MainProxy.CrmServiceClient.LastCrmException;
+            }
+
+            MainProxy.CallerId = MainProxy.CrmServiceClient.GetMyCrmUserId();
         }
 
         public ManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
         {
-            try
-            {
-                var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger);
-                return proxy;
-            }
-            catch (Exception ex)
-            {
-                retryCount++;
-                Thread.Sleep(2000 * retryCount);
-
-                if (retryCount > 5)
-                {
-                    throw ex;
-                }
-                return GetProxy(retryCount);
-            }
+            var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.CrmServiceClient);
+            return proxy;
         }
 
         /// <summary>
@@ -101,11 +95,17 @@ namespace Xrm.DataManager.Framework
             // If you're using an old version of .NET this will enable TLS 1.2
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            // Change max connections from .NET to a remote service default: 2
-            ServicePointManager.DefaultConnectionLimit = 85;
+            // Get the current settings for the Thread Pool
+            ThreadPool.GetMinThreads(out int minWorker, out int minIOC);
 
-            // Bump up the min threads reserved for this app to ramp connections faster - minWorkerThreads defaults to 4, minIOCP defaults to 4 
-            ThreadPool.SetMinThreads(10, 10);
+            // The number of worker threads to make simultaneous requests (do not go over 64)
+            const int numberRequests = 64;
+            // without setting the thread pool up, there was enough of a delay to cause timeouts!
+            ThreadPool.SetMinThreads(numberRequests, minIOC);
+
+            // Change max connections from .NET to a remote service default: 2
+            // MS Support max recommended value = 12 * logical processors
+            ServicePointManager.DefaultConnectionLimit = 12 * minWorker;
 
             // Turn off the Expect 100 to continue message - 'true' will cause the caller to wait until it round-trip confirms a connection to the server 
             ServicePointManager.Expect100Continue = false;

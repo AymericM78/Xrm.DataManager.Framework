@@ -69,14 +69,10 @@ namespace Xrm.DataManager.Framework
 
         private void DumpProxyToMetrics(ManagedTokenOrganizationServiceProxy proxy)
         {
-            //PushMetric($"Crm.CallerId", proxy.CallerId.ToString());
-            //PushMetric($"Crm.Auth.Type", proxy.CrmServiceClient.ActiveAuthenticationType.ToString());
-            //PushMetric($"Crm.Instance.Url", proxy.EndpointUrl);
-            //PushMetric($"Crm.Tenant.Id", proxy.CrmServiceClient.TenantId.ToString());
-            //PushMetric($"Crm.Environment.Id", proxy.CrmServiceClient.EnvironmentId.ToString());
-            //PushMetric($"Crm.Sdk.Version", proxy.CrmServiceClient.SdkVersionProperty.ToString());
-            //PushMetric($"Crm.Instance.Version", proxy.CrmServiceClient.ConnectedOrgVersion.ToString());
-            //PushMetric($"Crm.Instance.DisplayName", proxy.CrmServiceClient.ConnectedOrgFriendlyName.ToString());
+            PushMetric($"Crm.CallerId", proxy.CallerId.ToString());
+            PushMetric($"Crm.Auth.Type", proxy.CrmServiceClient.ActiveAuthenticationType.ToString());
+            PushMetric($"Crm.Instance.Url", proxy.EndpointUrl);;
+            PushMetric($"Crm.Instance.DisplayName", proxy.CrmServiceClient.ConnectedOrgFriendlyName.ToString());
         }
 
         public void PushMetric(string key, string value) => Properties.Add(key, value);

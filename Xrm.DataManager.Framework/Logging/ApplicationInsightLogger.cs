@@ -27,6 +27,7 @@ namespace Xrm.DataManager.Framework
             TelemetryClient = new TelemetryClient();
             TelemetryConfiguration.Active.InstrumentationKey = JobSettings.AppInsightsInstrumentationKey;
         }
+
         public override void LogVerbose(string message)
         {
             if (LogLevel != LogLevel.Verbose)

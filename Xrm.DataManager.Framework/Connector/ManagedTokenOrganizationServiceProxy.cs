@@ -19,6 +19,12 @@ namespace Xrm.DataManager.Framework
             set;
         }
 
+        private CrmServiceClient ParentCrmServiceClient
+        {
+            get;
+            set;
+        }
+
         public Guid CallerId
         {
             get;
@@ -31,173 +37,126 @@ namespace Xrm.DataManager.Framework
             set;
         }
 
+        public string ActiveAuthenticationType
+        {
+            get;
+            set;
+        }
+        public string ConnectedOrgFriendlyName
+        {
+            get;
+            set;
+        }
+
         protected ILogger Logger
         {
             get; set;
         }
 
-        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger)
+        private bool IsCloneAvailable()
+        {
+            if (ParentCrmServiceClient == null)
+            {
+                return false;
+            }
+
+            return (ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.OAuth
+                          || ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.ClientSecret
+                          || ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.Certificate);
+        }
+
+        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger, Guid callerId, CrmServiceClient parentClient = null)
         {
             CrmConnectionString = crmConnectionString;
             Logger = logger;
+            CallerId = callerId;
+            ParentCrmServiceClient = parentClient;
             InitializeClient();
         }
 
-        private void InitializeClient()
+        private void InitializeClient(bool forceReconnect = false)
         {
-            CrmServiceClient = new CrmServiceClient(CrmConnectionString);
-            if (CrmServiceClient.LastCrmException != null)
+            if (forceReconnect)
             {
-                Logger.LogInformation($"Failed to connect to CRM => {CrmServiceClient.LastCrmError}!");
-                throw CrmServiceClient.LastCrmException;
+                if (ParentCrmServiceClient != null)
+                {
+                    ParentCrmServiceClient = new CrmServiceClient(CrmConnectionString);
+                }
             }
-            CallerId = CrmServiceClient.GetMyCrmUserId();
+
+            if (IsCloneAvailable())
+            {
+                Retry(() =>
+                {
+                    CrmServiceClient = ParentCrmServiceClient.Clone();
+                    if (CrmServiceClient.LastCrmException != null)
+                    {
+                        throw CrmServiceClient.LastCrmException;
+                    }
+                    return true;
+                });
+            }
+            else
+            {
+                Retry(() =>
+                {
+                    CrmServiceClient = new CrmServiceClient(CrmConnectionString);
+                    if (CrmServiceClient.LastCrmException != null)
+                    {
+                        throw CrmServiceClient.LastCrmException;
+                    }
+                    return true;
+                });
+            }
+
+            if (CallerId == null)
+            {
+                CallerId = CrmServiceClient.GetMyCrmUserId();
+            }
+
+            ActiveAuthenticationType = CrmServiceClient.ActiveAuthenticationType.ToString();
+            ConnectedOrgFriendlyName = CrmServiceClient.ConnectedOrgFriendlyName;
             EndpointUrl = CrmServiceClient.ConnectedOrgPublishedEndpoints.Values.FirstOrDefault();
         }
 
         public Guid Create(Entity entity)
         {
-            try
-            {
-                return CrmServiceClient.Create(entity);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                return CrmServiceClient.Create(entity);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                return CrmServiceClient.Create(entity);
-            }
+            return Retry(() => { return CrmServiceClient.Create(entity); });
         }
 
         public Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
         {
-            try
-            {
-                return CrmServiceClient.Retrieve(entityName, id, columnSet);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                return CrmServiceClient.Retrieve(entityName, id, columnSet);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                return CrmServiceClient.Retrieve(entityName, id, columnSet);
-            }
+            return Retry(() => { return CrmServiceClient.Retrieve(entityName, id, columnSet); });
         }
 
         public void Update(Entity entity)
         {
-            try
-            {
-                CrmServiceClient.Update(entity);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                CrmServiceClient.Update(entity);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                CrmServiceClient.Update(entity);
-            }
+            Retry(() => { CrmServiceClient.Update(entity); return true; });
         }
 
         public void Delete(string entityName, Guid id)
         {
-            try
-            {
-                CrmServiceClient.Delete(entityName, id);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                CrmServiceClient.Delete(entityName, id);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                CrmServiceClient.Delete(entityName, id);
-            }
+            Retry(() => { CrmServiceClient.Delete(entityName, id); return true; });
         }
 
         public OrganizationResponse Execute(OrganizationRequest request)
         {
-            try
-            {
-                return CrmServiceClient.Execute(request);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                return CrmServiceClient.Execute(request);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                return CrmServiceClient.Execute(request);
-            }
+            return Retry(() => { return CrmServiceClient.Execute(request); });
         }
 
         public void Associate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
-            try
-            {
-                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities);
-            }
+            Retry(() => { CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities); return true; });
         }
 
         public void Disassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
-            try
-            {
-                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities);
-            }
+            Retry(() => { CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities); return true; });
         }
 
         public EntityCollection RetrieveMultiple(QueryBase query)
         {
-            try
-            {
-                var results = CrmServiceClient.RetrieveMultiple(query);
-                return results;
-            }
-            catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-            {
-                InitializeClient();
-                return CrmServiceClient.RetrieveMultiple(query);
-            }
-            catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
-            {
-                TransientIssueManager.ApplyDelay(e, Logger);
-                return CrmServiceClient.RetrieveMultiple(query);
-            }
+            return Retry(() => { return CrmServiceClient.RetrieveMultiple(query); });
         }
 
         /// <summary>
@@ -223,5 +182,42 @@ namespace Xrm.DataManager.Framework
         }
 
         public void Dispose() => CrmServiceClient.Dispose();
+
+        private T Retry<T>(Func<T> action)
+        {
+            var tries = 3;
+            while (true)
+            {
+                try
+                {
+                    var result = action();
+                    return result;
+                }
+                catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
+                {
+                    if (--tries == 0)
+                    {
+                        throw;
+                    }
+                    InitializeClient(true);
+                }
+                catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
+                {
+                    if (--tries == 0)
+                    {
+                        throw;
+                    }
+                    TransientIssueManager.ApplyDelay(e, Logger);
+                }
+                catch (Exception ex) when (TransientIssueManager.IsTransientError(ex))
+                {
+                    if (--tries == 0)
+                    {
+                        throw;
+                    }
+                    TransientIssueManager.ApplyDelay(Logger);
+                }
+            }
+        }
     }
 }

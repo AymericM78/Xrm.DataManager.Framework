@@ -4,7 +4,7 @@ using System;
 
 namespace Xrm.DataManager.Framework.Tests
 {
-    public class CustomDeletionJob : FullProcessDataJobBase
+    public class CustomDeletionJob : PickAndProcessDataJobBase
     {
         private string EntityName { get; set; }
         private int RetentionDays { get; set; }
