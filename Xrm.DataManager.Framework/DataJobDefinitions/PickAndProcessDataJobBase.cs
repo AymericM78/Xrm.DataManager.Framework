@@ -137,7 +137,7 @@ namespace Xrm.DataManager.Framework
                 }
 
                 // If we have only errors, we must stop
-                if (lastRunCount == records.Count)
+                if (currentFailures == records.Count)
                 {
                     Logger.LogInformation("Operation failed! (Reason: Too many errors detected)");
                     return true;
