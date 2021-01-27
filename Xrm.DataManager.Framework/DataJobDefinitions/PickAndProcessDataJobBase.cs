@@ -126,21 +126,21 @@ namespace Xrm.DataManager.Framework
                 // that mean that we don't need to continue
                 if (lastRunCount < JobSettings.QueryRecordLimit && lastRunCount == records.Count)
                 {
-                    Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: Infinite loop detected)");
+                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Infinite loop detected)");
                     return false;
                 }
 
                 // If job duration is greater or equal to execution limit, we can stop the process
                 if (duration.TotalHours >= JobSettings.MaxRunDurationInHour)
                 {
-                    Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: Max duration reached)");
+                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Max duration reached)");
                     return false;
                 }
 
                 // If we have only errors, we must stop
                 if (currentFailures == records.Count)
                 {
-                    Logger.LogInformation("Operation failed! (Entity : {entityName} | Reason: Too many errors detected)");
+                    Logger.LogInformation($"Operation failed! (Entity : {entityName} | Reason: Too many errors detected)");
                     return false;
                 }
 
@@ -153,7 +153,7 @@ namespace Xrm.DataManager.Framework
             // If the query return nothing, we have finished!
             if (records.Count == 0)
             {
-                Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: No more data to process)");
+                Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: No more data to process)");
                 return true;
             }
 
