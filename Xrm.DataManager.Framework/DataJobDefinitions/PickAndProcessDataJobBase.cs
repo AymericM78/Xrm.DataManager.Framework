@@ -46,6 +46,7 @@ namespace Xrm.DataManager.Framework
             query.PageInfo = null;
 
             var records = ProxiesPool.MainProxy.RetrieveMultiple(query).Entities;
+            var entityName = query.EntityName;
             var startTime = DateTime.Now;
 
             // Initialize last result count to prevent infinite loop
@@ -59,7 +60,7 @@ namespace Xrm.DataManager.Framework
             while (records.Count > 0)
             {
                 var stopwatch = Stopwatch.StartNew();
-                Logger.LogInformation($"Retrieved {records.Count} records from CRM");
+                Logger.LogInformation($"Retrieved {records.Count} records from CRM (Entity : {entityName})");
 
                 int currentProcessed = 0;
                 int currentSuccess = 0;
@@ -90,7 +91,7 @@ namespace Xrm.DataManager.Framework
 
                             Interlocked.Increment(ref totalSuccess);
                             Interlocked.Increment(ref currentSuccess);
-                            Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
+                            Logger.LogSuccess($"Record processed with success! (Entity : {entityName})", jobExecutionContext.DumpMetrics());
                         }
                         catch (FaultException<OrganizationServiceFault> faultException)
                         {
@@ -115,32 +116,32 @@ namespace Xrm.DataManager.Framework
 
                 stopwatch.Stop();
                 var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, records.Count);
-                Logger.LogInformation($"{currentProcessed} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures = {currentFailures}]!");
+                Logger.LogInformation($"{currentProcessed} records (Entity : {entityName}) processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures = {currentFailures}]!");
 
                 var duration = (DateTime.Now - startTime);
                 var globalSpeed = Utilities.GetSpeed(duration.TotalMilliseconds, totalProcessed);
-                Logger.LogInformation($"Total = {totalProcessed} records processed in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures = {totalFailures}]");
+                Logger.LogInformation($"Total = {totalProcessed} records processed (Entity : {entityName}) in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures = {totalFailures}]");
 
                 // If we have the same number of record processed in this round than the previous one, 
                 // that mean that we don't need to continue
                 if (lastRunCount < JobSettings.QueryRecordLimit && lastRunCount == records.Count)
                 {
-                    Logger.LogInformation("Operation completed! (Reason: Infinite loop detected)");
-                    return true;
+                    Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: Infinite loop detected)");
+                    return false;
                 }
 
                 // If job duration is greater or equal to execution limit, we can stop the process
                 if (duration.TotalHours >= JobSettings.MaxRunDurationInHour)
                 {
-                    Logger.LogInformation("Operation completed! (Reason: Max duration reached)");
-                    return true;
+                    Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: Max duration reached)");
+                    return false;
                 }
 
                 // If we have only errors, we must stop
                 if (currentFailures == records.Count)
                 {
-                    Logger.LogInformation("Operation failed! (Reason: Too many errors detected)");
-                    return true;
+                    Logger.LogInformation("Operation failed! (Entity : {entityName} | Reason: Too many errors detected)");
+                    return false;
                 }
 
                 lastRunCount = records.Count;
@@ -152,7 +153,7 @@ namespace Xrm.DataManager.Framework
             // If the query return nothing, we have finished!
             if (records.Count == 0)
             {
-                Logger.LogInformation("Operation completed! (Reason: No more data to process)");
+                Logger.LogInformation("Operation completed! (Entity : {entityName} | Reason: No more data to process)");
                 return true;
             }
 
