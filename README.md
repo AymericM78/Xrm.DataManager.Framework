@@ -50,9 +50,9 @@ Parameter name|Default or available values|Description
 --------------|---------------------------|-----------
 Crm.ConnectionString|Specify connection string to Microsoft Dataverse
 Job.Names|ex: DeleteAccountsJobs, DeleteContactsJob|Specify if you want to run multiple jobs (classe names splitted with ',')
-Process.Duration.MaxHours|Par défaut: 8|Max job duration, to prevent nigh batch to run in prod during the day
-Process.Query.RecordLimit|Par défaut: 2500|Records count to retrieve for each page (max 5000)
-Process.Thread.Number|Par défaut: 10|Specify the number of threads to run
+Process.Duration.MaxHours|Default: 8|Max job duration, to prevent nigh batch to run in prod during the day
+Process.Query.RecordLimit|Default: 2500|Records count to retrieve for each page (max 5000)
+Process.Thread.Number|Default: 10|Specify the number of threads to run
 LogLevel|Verbose = 0,<br/>Information = 1,<br/>ErrorsAndSuccess = 2,<br/>ErrorsOnly = 3|Tracing level
 AppInsights.Instrumentation.Key|Guid|Application Insights telemetry key
 Graylog.Url|URL|Graylog Gelf endpoint URI
