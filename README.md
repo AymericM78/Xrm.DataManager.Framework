@@ -22,7 +22,7 @@ Nuget framework for massive Microsoft Dataverse data operations.
 
 ## 🚀 Features
 
-'Xrm.DataManager.Framework' provides folling features :
+`Xrm.DataManager.Framework` provides folling features :
 
 - **Batching patterns** : Full, Delta, ...
 - **Performances** : Perf tuning, multi threading, ...
@@ -30,7 +30,7 @@ Nuget framework for massive Microsoft Dataverse data operations.
 - **Tracing** : Supports file output, App Insights and Graylog...
 - **Configuration management** : Simplified conf ...
 
-'Xrm.DataManager.Framework' is designed to simplify dev work by reducing core development and focus to functional implementation.
+`Xrm.DataManager.Framework` is designed to simplify dev work by reducing core development and focus to functional implementation.
 
 ## 👐 Community contributions
 
@@ -48,19 +48,14 @@ You need to specify following parameters in 'app.config':
 
 Parameter name|Default or available values|Description
 --------------|---------------------------|-----------
-Crm.User.Name|ex: toto@domaine.com|Connexion de l'utilisateur D365 / Power Apps
-Crm.User.Password|ex: Passez @ Word!|Mot de passe
-Crm.Instance.Name|ex: crmprod1|Nom de l'instance, partie de l'url entre https: // et .crmx.dynamics.com
-Job.Noms|ex: DeleteAccountsJobs, DeleteContactsJob|Noms des classes de travail à executer et séparés par des virgules ','
-Process.Duration.MaxHours|Par défaut: 8|Durée max d'un job, ce qui permet de limiter la durée globale du traitement en HNO
-Process.Query.RecordLimit|Par défaut: 2500|Nombre d'enregistrements récupérés à chaque cycle (max 5000)
-Process.Thread.Number|Par défaut: 10|Nombre de thread alloués pour traiter chaque lot d'enregistrement par cycle
-LogLevel|Verbose = 0,|Niveau minimal de traçage
-Information = 1,
-ErrorsAndSuccess = 2,
-ErrorsOnly = 3
-AppInsights.Instrumentation.Key|Guid|Aperçu de l'application Clé
-Graylog.Url|URL|Url du endpoint gelf Graylog
+Crm.ConnectionString|Specify connection string to Microsoft Dataverse
+Job.Names|ex: DeleteAccountsJobs, DeleteContactsJob|Specify if you want to run multiple jobs (classe names splitted with ',')
+Process.Duration.MaxHours|Par défaut: 8|Max job duration, to prevent nigh batch to run in prod during the day
+Process.Query.RecordLimit|Par défaut: 2500|Records count to retrieve for each page (max 5000)
+Process.Thread.Number|Par défaut: 10|Specify the number of threads to run
+LogLevel|Verbose = 0,<br/>Information = 1,<br/>ErrorsAndSuccess = 2,<br/>ErrorsOnly = 3|Tracing level
+AppInsights.Instrumentation.Key|Guid|Application Insights telemetry key
+Graylog.Url|URL|Graylog Gelf endpoint URI
 
 ### Usage
 
