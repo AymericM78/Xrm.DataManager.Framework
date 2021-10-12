@@ -60,7 +60,11 @@
   <ItemGroup>
     <Compile Include="CustomDeletion\CustomDeletionJob.cs" />
     <Compile Include="CustomDeletion\CustomJobProcessor.cs" />
+    <Compile Include="DataJobs\RemoveAsyncTasksDataJob.cs" />
+    <Compile Include="DataJobs\RemovePluginTracesDataJob.cs" />
+    <Compile Include="DataJobs\CancelAndRemoveAsyncTasksDataJob.cs" />
     <Compile Include="DataJobs\TestPickAndProcessDataJob.cs" />
+    <Compile Include="JobProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

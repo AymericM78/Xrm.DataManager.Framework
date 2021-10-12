@@ -12,8 +12,12 @@ namespace Xrm.DataManager.Framework.Tests
             //var process = new Processor();
             //process.Execute(args);
 
-            var process = new CustomJobProcessor();
-            process.Execute();
+            //var process = new CustomJobProcessor();
+            //process.Execute();
+
+            var process = new JobProcessor();
+            process.Execute<CancelAndRemoveAsyncTasksDataJob>();
+            process.Execute<RemoveAsyncTasksDataJob>();
         }
     }
 }
