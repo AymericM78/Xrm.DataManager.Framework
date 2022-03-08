@@ -9,7 +9,7 @@ using System.ServiceModel.Security;
 
 namespace Xrm.DataManager.Framework
 {
-    public class ManagedTokenOrganizationServiceProxy : IOrganizationService, IDisposable
+    public class ManagedTokenOrganizationServiceProxy : IManagedTokenOrganizationServiceProxy
     {
         private string CrmConnectionString;
 

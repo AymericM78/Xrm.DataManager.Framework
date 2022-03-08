@@ -5,7 +5,7 @@ namespace Xrm.DataManager.Framework
 {
     public class JobExecutionContext
     {
-        public ManagedTokenOrganizationServiceProxy Proxy
+        public IManagedTokenOrganizationServiceProxy Proxy
         {
             get;
             internal set;
@@ -23,7 +23,7 @@ namespace Xrm.DataManager.Framework
         {
             Properties = new Dictionary<string, string>();
         }
-        public JobExecutionContext(ManagedTokenOrganizationServiceProxy proxy)
+        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy)
         {
             Proxy = proxy;
             Properties = new Dictionary<string, string>();
@@ -31,7 +31,7 @@ namespace Xrm.DataManager.Framework
             DumpProxyToMetrics(proxy);
         }
 
-        public JobExecutionContext(ManagedTokenOrganizationServiceProxy proxy, Entity record)
+        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy, Entity record)
         {
             Proxy = proxy;
             Record = record;
@@ -67,7 +67,7 @@ namespace Xrm.DataManager.Framework
             }
         }
 
-        private void DumpProxyToMetrics(ManagedTokenOrganizationServiceProxy proxy)
+        private void DumpProxyToMetrics(IManagedTokenOrganizationServiceProxy proxy)
         {
             PushMetric($"Crm.CallerId", proxy.CallerId.ToString());
             PushMetric($"Crm.Auth.Type", proxy.CrmServiceClient.ActiveAuthenticationType.ToString());

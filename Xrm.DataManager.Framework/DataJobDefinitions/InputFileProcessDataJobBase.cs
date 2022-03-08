@@ -40,7 +40,7 @@ namespace Xrm.DataManager.Framework
 
         public virtual void ProcessRecord(JobExecutionContext context, string[] lineData) => throw new NotImplementedException();
 
-        public virtual Entity SearchRecord(ManagedTokenOrganizationServiceProxy proxy, string[] lineData) => throw new NotImplementedException();
+        public virtual Entity SearchRecord(IManagedTokenOrganizationServiceProxy proxy, string[] lineData) => throw new NotImplementedException();
 
         /// <summary>
         /// Run the job

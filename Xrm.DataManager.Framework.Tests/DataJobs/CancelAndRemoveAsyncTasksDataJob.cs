@@ -48,7 +48,7 @@ namespace Xrm.DataManager.Framework.Tests
             {
 
             }
-
+            return;
             try
             {
                 proxy.Delete(record.LogicalName, record.Id);

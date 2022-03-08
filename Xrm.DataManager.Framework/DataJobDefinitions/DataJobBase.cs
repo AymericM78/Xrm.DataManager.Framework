@@ -76,7 +76,7 @@ namespace Xrm.DataManager.Framework
         /// <summary>
         /// Specify task to run before record processing
         /// </summary>
-        public virtual void PreOperation(ManagedTokenOrganizationServiceProxy proxy)
+        public virtual void PreOperation(IManagedTokenOrganizationServiceProxy proxy)
         {
             // Nothing to do here
         }
@@ -84,7 +84,7 @@ namespace Xrm.DataManager.Framework
         /// <summary>
         /// Specify task to run after record processing
         /// </summary>
-        public virtual void PostOperation(ManagedTokenOrganizationServiceProxy proxy)
+        public virtual void PostOperation(IManagedTokenOrganizationServiceProxy proxy)
         {
             // Nothing to do here
         }

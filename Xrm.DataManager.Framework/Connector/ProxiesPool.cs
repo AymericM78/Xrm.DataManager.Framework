@@ -29,7 +29,7 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
-        public ManagedTokenOrganizationServiceProxy MainProxy
+        public IManagedTokenOrganizationServiceProxy MainProxy
         {
             get;
             private set;
@@ -81,7 +81,7 @@ namespace Xrm.DataManager.Framework
             MainProxy.CallerId = MainProxy.CrmServiceClient.GetMyCrmUserId();
         }
 
-        public ManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
+        public IManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
         {
             var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.CrmServiceClient);
             return proxy;

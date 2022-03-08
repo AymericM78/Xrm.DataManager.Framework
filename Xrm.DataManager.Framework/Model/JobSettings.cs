@@ -26,7 +26,7 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
-        public string CrmConnectionString => GetOptionalParameter<string>("Crm.ConnectionString");
+        public string CrmConnectionString => GetConnectionStringParameter();
 
         [Obsolete("You must use connection string with oAuth.")]
         public string CrmUserName => GetOptionalParameter<string>("Crm.User.Name");
@@ -123,6 +123,17 @@ namespace Xrm.DataManager.Framework
             }
 
             throw new Exception($"Invalid configuration : setting '{key}' has not valid type!");
+        }
+
+        private string GetConnectionStringParameter()
+        {
+            string value = GetOptionalParameter<string>("Crm.ConnectionString");
+            if (string.IsNullOrEmpty(value))
+            {
+                // XrmFramework compatibility
+                value = GetOptionalParameter<string>("Xrm");
+            }
+            return value;
         }
     }
 }
