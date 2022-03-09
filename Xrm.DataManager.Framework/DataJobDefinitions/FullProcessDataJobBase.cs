@@ -78,23 +78,21 @@ namespace Xrm.DataManager.Framework
         /// <returns></returns>
         public override bool Run()
         {
-            base.ContextProperties.Add("JobName", this.GetName());
-
             var progressWriter = new MultiThreadFileWriter(ProgressFilePath);
 
-            Logger.LogInformation($"Checking {ProgressFilePath} existence...");
+            Logger.LogInformation($"Checking {ProgressFilePath} existence...", base.ContextProperties);
             // Load already processed items from tracking file if exists
             var processedItems = new List<string>();
             if (File.Exists(ProgressFilePath))
             {
-                Logger.LogInformation($"File {ProgressFilePath} detected! Continue process at it last state");
+                Logger.LogInformation($"File {ProgressFilePath} detected! Continue process at it last state", base.ContextProperties);
 
                 var lines = File.ReadAllLines(ProgressFilePath);
                 processedItems = lines.ToList();
             }
             else
             {
-                Logger.LogInformation($"File {ProgressFilePath} not detected! Start process from 0");
+                Logger.LogInformation($"File {ProgressFilePath} not detected! Start process from 0", base.ContextProperties);
             }
 
             var jobName = GetName();
@@ -103,12 +101,12 @@ namespace Xrm.DataManager.Framework
             query.NoLock = true;
 
             var results = ProxiesPool.MainProxy.RetrieveAll(query);
-            Logger.LogInformation($"Retrieved {results.Entities.Count} records from CRM");
+            Logger.LogInformation($"Retrieved {results.Entities.Count} records from CRM", base.ContextProperties);
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
             var data = PrepareData(results.Entities);
             var dataCount = data.Count();
-            Logger.LogInformation($"{dataCount} records to process");
+            Logger.LogInformation($"{dataCount} records to process", base.ContextProperties);
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
             var progressDisplayStep = (this.OverrideProgressDisplayStep.HasValue) ? this.OverrideProgressDisplayStep.Value : DefaultProgressDisplayStep;
@@ -136,7 +134,7 @@ namespace Xrm.DataManager.Framework
                 // Increment progress bar every x records
                 if (processedItemCount % progressDisplayStep == 0)
                 {
-                    Logger.LogInformation($"Processing record {processedItemCount} / {dataCount}");
+                    Logger.LogInformation($"Processing record {processedItemCount} / {dataCount}", jobExecutionContext.DumpMetrics());
                 }
 
                 // Exit if record has already been processed
@@ -172,12 +170,12 @@ namespace Xrm.DataManager.Framework
 
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);
-            Logger.LogInformation($"{dataCount} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed}]!");
+            Logger.LogInformation($"{dataCount} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed}]!", base.ContextProperties);
 
             if (File.Exists(ProgressFilePath))
             {
                 File.Delete(ProgressFilePath);
-                Logger.LogInformation($"Progress file {ProgressFilePath} removed!");
+                Logger.LogInformation($"Progress file {ProgressFilePath} removed!", base.ContextProperties);
             }
 
             return true;

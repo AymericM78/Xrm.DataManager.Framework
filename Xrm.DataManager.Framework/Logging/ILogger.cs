@@ -16,6 +16,7 @@ namespace Xrm.DataManager.Framework
         void LogFailure(Exception exception);
 
         void LogFailure(Exception exception, Dictionary<string, string> properties);
+
         void LogInformation(string message, Dictionary<string, string> properties, bool display = true);
     }
 }

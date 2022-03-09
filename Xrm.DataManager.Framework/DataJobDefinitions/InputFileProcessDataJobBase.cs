@@ -50,7 +50,6 @@ namespace Xrm.DataManager.Framework
         public override bool Run()
         {
             var jobName = GetName();
-            base.ContextProperties.Add("JobName", jobName);
             var defaultFileSeparator = GetInputFileSeparator().First();
 
             List<string> lines = new List<string>();
@@ -60,7 +59,7 @@ namespace Xrm.DataManager.Framework
                 var fileLines = File.ReadAllLines(GetPivotFilePath());
                 lines = fileLines.ToList();
 
-                Logger.LogInformation($"Retrieved {lines.Count} from file {GetPivotFilePath()}");
+                Logger.LogInformation($"Retrieved {lines.Count} from file {GetPivotFilePath()}", base.ContextProperties);
             }
             else
             {
@@ -68,7 +67,7 @@ namespace Xrm.DataManager.Framework
                 var fileLines = File.ReadAllLines(GetInputFilePath());
                 lines = fileLines.ToList();
 
-                Logger.LogInformation($"Retrieved {lines.Count} from file {GetInputFilePath()}");
+                Logger.LogInformation($"Retrieved {lines.Count} from file {GetInputFilePath()}", base.ContextProperties);
 
                 // Create pivot file that track progress and outcome
                 var header = lines.First();
@@ -170,7 +169,7 @@ namespace Xrm.DataManager.Framework
                 });
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, lines.Count);
-            Logger.LogInformation($"{lines.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!");
+            Logger.LogInformation($"{lines.Count} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed.ToString("g")} [Speed = {speed}]!", base.ContextProperties);
 
             return true;
         }

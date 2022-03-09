@@ -64,7 +64,6 @@
     <Compile Include="DataJobs\RemovePluginTracesDataJob.cs" />
     <Compile Include="DataJobs\CancelAndRemoveAsyncTasksDataJob.cs" />
     <Compile Include="DataJobs\TestPickAndProcessDataJob.cs" />
-    <Compile Include="JobProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

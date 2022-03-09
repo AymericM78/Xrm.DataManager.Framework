@@ -7,7 +7,7 @@ namespace Xrm.DataManager.Framework
     public abstract class DataJobBase
     {
         protected Dictionary<string, object> JobProperties { get; set; } = new Dictionary<string, object>();
-        protected Dictionary<string, string> ContextProperties { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> ContextProperties { get; set; } = new Dictionary<string, string>();
 
         protected JobSettings JobSettings
         {

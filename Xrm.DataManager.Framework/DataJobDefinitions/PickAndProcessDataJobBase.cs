@@ -40,7 +40,6 @@ namespace Xrm.DataManager.Framework
         public override bool Run()
         {
             var jobName = GetName();
-            ContextProperties.Add("JobName", jobName);
             var query = GetQuery(CallerId);
             query.TopCount = JobSettings.QueryRecordLimit;
             query.NoLock = true;
@@ -61,7 +60,7 @@ namespace Xrm.DataManager.Framework
             while (records.Count > 0)
             {
                 var stopwatch = Stopwatch.StartNew();
-                Logger.LogInformation($"Retrieved {records.Count} records from CRM (Entity : {entityName})");
+                Logger.LogInformation($"Retrieved {records.Count} records from CRM (Entity : {entityName})", base.ContextProperties);
 
                 int currentProcessed = 0;
                 int currentSuccess = 0;
@@ -117,31 +116,31 @@ namespace Xrm.DataManager.Framework
 
                 stopwatch.Stop();
                 var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, records.Count);
-                Logger.LogInformation($"{currentProcessed} records (Entity : {entityName}) processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures = {currentFailures}]!");
+                Logger.LogInformation($"{currentProcessed} records (Entity : {entityName}) processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed} | Success = {currentSuccess} | Failures = {currentFailures}]!", base.ContextProperties);
 
                 var duration = (DateTime.Now - startTime);
                 var globalSpeed = Utilities.GetSpeed(duration.TotalMilliseconds, totalProcessed);
-                Logger.LogInformation($"Total = {totalProcessed} records processed (Entity : {entityName}) in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures = {totalFailures}]");
+                Logger.LogInformation($"Total = {totalProcessed} records processed (Entity : {entityName}) in {duration:g}! [Speed = {globalSpeed} | Success = {totalSuccess} | Failures = {totalFailures}]", base.ContextProperties);
 
                 // If we have the same number of record processed in this round than the previous one, 
                 // that mean that we don't need to continue
                 if (lastRunCount < JobSettings.QueryRecordLimit && lastRunCount == records.Count)
                 {
-                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Infinite loop detected)");
+                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Infinite loop detected)", base.ContextProperties);
                     return false;
                 }
 
                 // If job duration is greater or equal to execution limit, we can stop the process
                 if (duration.TotalHours >= JobSettings.MaxRunDurationInHour)
                 {
-                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Max duration reached)");
+                    Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: Max duration reached)", base.ContextProperties);
                     return false;
                 }
 
                 // If we have only errors, we must stop
                 if (currentFailures == records.Count)
                 {
-                    Logger.LogInformation($"Operation failed! (Entity : {entityName} | Reason: Too many errors detected)");
+                    Logger.LogInformation($"Operation failed! (Entity : {entityName} | Reason: Too many errors detected)", base.ContextProperties);
                     return false;
                 }
 
@@ -154,7 +153,7 @@ namespace Xrm.DataManager.Framework
             // If the query return nothing, we have finished!
             if (records.Count == 0)
             {
-                Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: No more data to process)");
+                Logger.LogInformation($"Operation completed! (Entity : {entityName} | Reason: No more data to process)", base.ContextProperties);
                 return true;
             }
 

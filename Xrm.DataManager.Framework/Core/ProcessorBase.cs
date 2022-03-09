@@ -60,8 +60,7 @@ namespace Xrm.DataManager.Framework
             //    throw new Exception("Execution is not allowed on production");
             //}
 
-            JobSettings.SelectedJobName = selectedDataJob.GetName();
-            Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}");
+            Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}", selectedDataJob.ContextProperties);
 
             // Pre Operation
             selectedDataJob.PreOperation(ProxiesPool.MainProxy);
@@ -71,7 +70,7 @@ namespace Xrm.DataManager.Framework
 
             // Post Operation
             selectedDataJob.PostOperation(ProxiesPool.MainProxy);
-            Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}");
+            Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}", selectedDataJob.ContextProperties);
         }
 
         /// <summary>

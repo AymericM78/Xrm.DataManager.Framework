@@ -18,6 +18,8 @@ namespace Xrm.DataManager.Framework
                 CallerId = CallerId
             };
 
+            JobSettings.SelectedJobName = typeof(T).Name;
+
             var constructor = typeof(T).GetConstructor(new Type[] { typeof(JobSettings), typeof(JobProcessParameters) });
             var dataJobInstance = constructor?.Invoke(new object[] { JobSettings, parameters }) as DataJobBase;
 
