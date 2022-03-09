@@ -36,7 +36,7 @@ namespace Xrm.DataManager.Framework
         public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
 
         public string JobNames => GetOptionalParameter<string>("Job.Names");
-        public string AppInsightsInstrumentationKey => GetOptionalParameter<string>("AppInsights.Instrumentation.Key");
+        public string AppInsightsInstrumentationKey => GetAppInsightsTelemetryKey();
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 8);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
         public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 10);
@@ -132,6 +132,17 @@ namespace Xrm.DataManager.Framework
             {
                 // XrmFramework compatibility
                 value = GetOptionalParameter<string>("Xrm");
+            }
+            return value;
+        }
+
+        private string GetAppInsightsTelemetryKey()
+        {
+            string value = GetOptionalParameter<string>("AppInsights.Instrumentation.Key");
+            if (string.IsNullOrEmpty(value))
+            {
+                // Azure compatibility
+                value = GetOptionalParameter<string>("APPINSIGHTS_INSTRUMENTATIONKEY");
             }
             return value;
         }
