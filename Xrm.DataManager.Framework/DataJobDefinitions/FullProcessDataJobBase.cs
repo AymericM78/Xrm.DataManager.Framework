@@ -78,6 +78,8 @@ namespace Xrm.DataManager.Framework
         /// <returns></returns>
         public override bool Run()
         {
+            base.ContextProperties.Add("JobName", this.GetName());
+
             var progressWriter = new MultiThreadFileWriter(ProgressFilePath);
 
             Logger.LogInformation($"Checking {ProgressFilePath} existence...");

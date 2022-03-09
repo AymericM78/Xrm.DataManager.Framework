@@ -67,6 +67,17 @@ namespace Xrm.DataManager.Framework
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="properties"></param>
+        /// <param name="display"></param>
+        public override void LogInformation(string message, Dictionary<string, string> properties, bool display = true)
+        {
+            LogInformation(message, display);
+        }
+
+        /// <summary>
         /// Log success to file
         /// </summary>
         /// <param name="message"></param>

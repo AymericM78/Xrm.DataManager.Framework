@@ -53,6 +53,19 @@ namespace Xrm.DataManager.Framework
             TelemetryClient.TrackTrace(message, SeverityLevel.Information);
         }
 
+        public override void LogInformation(string message, Dictionary<string, string> properties, bool display = true)
+        {
+            if (display)
+            {
+                LogDisplay(message);
+            }
+            if (LogLevel > LogLevel.Information)
+            {
+                return;
+            }
+            TelemetryClient.TrackTrace(message, SeverityLevel.Information, properties);
+        }
+
         public override void LogSuccess(string message, Dictionary<string, string> properties)
         {
             if (LogLevel > LogLevel.ErrorsAndSuccess)

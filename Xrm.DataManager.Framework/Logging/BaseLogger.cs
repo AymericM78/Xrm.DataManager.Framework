@@ -41,5 +41,7 @@ namespace Xrm.DataManager.Framework
         public abstract void LogSuccess(string message, Dictionary<string, string> properties);
 
         public abstract void LogVerbose(string message);
+
+        public abstract void LogInformation(string message, Dictionary<string, string> properties, bool display = true);
     }
 }

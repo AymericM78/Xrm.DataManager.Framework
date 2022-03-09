@@ -131,5 +131,18 @@ namespace Xrm.DataManager.Framework
         }
 
         public override void LogFailure(Exception exception, Dictionary<string, string> properties) => LogInternal(exception.Message, true, properties);
+
+        public override void LogInformation(string message, Dictionary<string, string> properties, bool display = true)
+        {
+            if (display)
+            {
+                LogDisplay(message);
+            }
+            if (LogLevel > LogLevel.Information)
+            {
+                return;
+            }
+            LogInternal(message, properties);
+        }
     }
 }

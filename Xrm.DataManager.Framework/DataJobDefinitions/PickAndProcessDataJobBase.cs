@@ -40,6 +40,7 @@ namespace Xrm.DataManager.Framework
         public override bool Run()
         {
             var jobName = GetName();
+            ContextProperties.Add("JobName", jobName);
             var query = GetQuery(CallerId);
             query.TopCount = JobSettings.QueryRecordLimit;
             query.NoLock = true;

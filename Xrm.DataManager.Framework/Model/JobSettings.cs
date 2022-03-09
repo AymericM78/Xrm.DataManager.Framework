@@ -37,9 +37,9 @@ namespace Xrm.DataManager.Framework
 
         public string JobNames => GetOptionalParameter<string>("Job.Names");
         public string AppInsightsInstrumentationKey => GetAppInsightsTelemetryKey();
-        public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 8);
+        public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 48);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
-        public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 10);
+        public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 5);
         public string GrayLogUrl => GetOptionalParameter<string>("Graylog.Url");
         public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
 

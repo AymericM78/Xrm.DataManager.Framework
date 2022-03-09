@@ -50,6 +50,7 @@ namespace Xrm.DataManager.Framework
         public override bool Run()
         {
             var jobName = GetName();
+            base.ContextProperties.Add("JobName", jobName);
             var defaultFileSeparator = GetInputFileSeparator().First();
 
             List<string> lines = new List<string>();
