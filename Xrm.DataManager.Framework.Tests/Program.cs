@@ -6,17 +6,14 @@ namespace Xrm.DataManager.Framework.Tests
 {
     class Program
     {
+
         static void Main(string[] args)
         {
-            //var process = new Processor();
-            //process.Execute(args);
+            var process = new Processor();
+            process.Execute(args);
 
             //var process = new CustomJobProcessor();
             //process.Execute();
-
-            var process = new JobProcessor();
-            process.Execute<CancelAndRemoveAsyncTasksDataJob>();
-            //process.Execute<RemoveAsyncTasksDataJob>();
         }
     }
 }

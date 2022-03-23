@@ -13,42 +13,52 @@ namespace Xrm.DataManager.Framework
         {
             var instances = InstancePicker.GetInstances();
             Instance selectedInstance = null;
-            if (JobSettings.CrmInstanceNameDefined)
+            if (instances == null)
             {
-                // Load instance from config file
-                selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.CrmInstanceName);
-                if (selectedInstance == null)
+                if (!JobSettings.ConnectionStringDefined)
                 {
-                    throw new Exception($"Instance uniquename '{JobSettings.CrmInstanceName}' doesn't match known instances list!");
+                    throw new Exception("Connection string is not defined!");
                 }
+                InitializeOrganizationServiceManager(JobSettings.CrmConnectionString);
             }
             else
             {
-                // Display instances selector           
-                selectedInstance = ConsoleHelper.InstanceSelect(instances);
-            }
-
-            if (selectedInstance == null)
-            {
-                if (args.Length != 2)
+                if (JobSettings.CrmInstanceNameDefined)
                 {
-                    throw new Exception("Usage : YourApp.exe 'InstanceName' 'Job1,Job2'\r\nExample : YourApp.exe 'dynamicsinstance1' 'PluginTraceDeleteDataJob'");
+                    // Load instance from config file
+                    selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.CrmInstanceName);
+                    if (selectedInstance == null)
+                    {
+                        throw new Exception($"Instance uniquename '{JobSettings.CrmInstanceName}' doesn't match known instances list!");
+                    }
                 }
                 else
                 {
-                    JobSettings.SelectedInstanceName = args[0];
-                    JobSettings.Jobs = args[1];
-
-                    selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.SelectedInstanceName);
+                    // Display instances selector           
+                    selectedInstance = ConsoleHelper.InstanceSelect(instances);
                 }
-            }
 
-            if (selectedInstance == null)
-            {
-                throw new Exception("Instance not specified!");
-            }
+                if (selectedInstance == null)
+                {
+                    if (args.Length != 2)
+                    {
+                        throw new Exception("Usage : YourApp.exe 'InstanceName' 'Job1,Job2'\r\nExample : YourApp.exe 'dynamicsinstance1' 'PluginTraceDeleteDataJob'");
+                    }
+                    else
+                    {
+                        JobSettings.SelectedInstanceName = args[0];
+                        JobSettings.Jobs = args[1];
 
-            InitializeOrganizationServiceManager(selectedInstance);
+                        selectedInstance = instances.FirstOrDefault(i => i.Name == JobSettings.SelectedInstanceName);
+                    }
+                }
+
+                if (selectedInstance == null)
+                {
+                    throw new Exception("Instance not specified!");
+                }
+                InitializeOrganizationServiceManager(selectedInstance);
+            }
 
             var parameters = new JobProcessParameters { ProxiesPool = ProxiesPool, Logger = Logger, CallerId = CallerId };
 

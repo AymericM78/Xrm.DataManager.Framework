@@ -15,7 +15,10 @@ namespace Xrm.DataManager.Framework
         public static List<Instance> GetInstances()
         {
             var instanceList = new InstanceList();
-
+            if (!File.Exists("Instances.xml"))
+            {
+                return null;
+            }
             var serializer = new XmlSerializer(typeof(InstanceList), new XmlRootAttribute("Instances"));
             using (Stream reader = new FileStream("Instances.xml", FileMode.Open))
             {

@@ -80,8 +80,7 @@ namespace Xrm.DataManager.Framework
         {
             if (JobSettings.ConnectionStringDefined)
             {
-                ProxiesPool = new ProxiesPool(JobSettings.CrmConnectionString, this.Logger);
-                Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");
+                InitializeOrganizationServiceManager(instance.ConnectionString);
             }
             else
             {
@@ -91,7 +90,7 @@ namespace Xrm.DataManager.Framework
                     if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
                     {
                         ProxiesPool = new ProxiesPool(instance.ConnectionString, this.Logger);
-                        Logger.LogInformation($"Organization service initialized to {instance.DisplayName} with user {JobSettings.CrmUserName} [ID : {ProxiesPool.MainProxy.CallerId} - Url : {ProxiesPool.MainProxy.EndpointUrl}]!");
+                        InitializeOrganizationServiceManager(instance.ConnectionString);
                     }
                     else
                     {
@@ -99,6 +98,16 @@ namespace Xrm.DataManager.Framework
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connectionString"></param>
+        protected void InitializeOrganizationServiceManager(string connectionString)
+        {
+            ProxiesPool = new ProxiesPool(connectionString, this.Logger);
+            Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");            
         }
     }
 }
