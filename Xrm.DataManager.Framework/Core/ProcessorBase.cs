@@ -80,7 +80,7 @@ namespace Xrm.DataManager.Framework
         {
             if (JobSettings.ConnectionStringDefined)
             {
-                InitializeOrganizationServiceManager(instance.ConnectionString);
+                InitializeOrganizationServiceManager(JobSettings.CrmConnectionString);
             }
             else
             {
