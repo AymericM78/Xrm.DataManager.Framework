@@ -15,10 +15,12 @@ namespace Xrm.DataManager.Framework.Tests
             constructedMethod.Invoke(jobProcessor, null);
         }
 
-
         static void Main(string[] args)
         {
+            RunJob<CancelAsyncTasksDataJob>();
             RunJob<RemoveAsyncTasksDataJob>();
+            RunJob<RemovePluginTracesDataJob>();
+
             //var process = new Processor();
             //process.Execute(args);
 
