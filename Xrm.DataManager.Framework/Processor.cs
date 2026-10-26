@@ -30,19 +30,19 @@ namespace Xrm.DataManager.Framework
         {
             if (args?.Length > 0)
             {
-                // connectionStrings entry name
-                JobSettings.SelectedInstanceName = args[0];
+                // Target connectionStrings entry name
+                JobSettings.SelectedConnectionName = args[0];
             }
             InitializeOrganizationServiceManager();
 
-            var parameters = new JobProcessParameters { ProxiesPool = ProxiesPool, Logger = Logger, CallerId = CallerId };
+            var parameters = CreateJobProcessParameters();
 
             var selectDataJobs = new List<DataJobBase>();
             var dataJobs = DataJobPicker.GetDataJobs(JobSettings, parameters);
 
-            if (JobSettings.JobNamesDefined)
+            if (JobSettings.TargetJobNamesDefined)
             {
-                JobSettings.Jobs = JobSettings.JobNames;
+                JobSettings.Jobs = JobSettings.TargetJobNames;
             }
             if (args?.Length > 1)
             {
@@ -54,10 +54,10 @@ namespace Xrm.DataManager.Framework
                 var jobNames = JobSettings.Jobs.Split(',');
                 foreach (var jobName in jobNames)
                 {
-                    var job = dataJobs.FirstOrDefault(j => j.GetType().Name == jobName);
+                    var job = dataJobs.FirstOrDefault(j => j.GetType().Name == jobName.Trim());
                     if (job == null)
                     {
-                        throw new Exception("Specified job is invalid!");
+                        throw new Exception($"Specified job '{jobName}' is invalid!");
                     }
                     selectDataJobs.Add(job);
                 }
@@ -91,7 +91,7 @@ namespace Xrm.DataManager.Framework
                 Logger.Flush();
                 try
                 {
-                    ProxiesPool.Dispose();
+                    Connections.Dispose();
                 }
                 catch (Exception ex)
                 {

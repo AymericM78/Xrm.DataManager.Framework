@@ -12,7 +12,17 @@ namespace Xrm.DataManager.Framework
         {
             get;
         }
+        /// <summary>
+        /// Target connection
+        /// </summary>
         protected ProxiesPool ProxiesPool
+        {
+            get; private set;
+        }
+        /// <summary>
+        /// All connections (connectionStrings entries), opened on first use
+        /// </summary>
+        protected ProxiesPoolManager Connections
         {
             get; private set;
         }
@@ -89,71 +99,89 @@ namespace Xrm.DataManager.Framework
         }
 
         /// <summary>
-        /// Initialize Dataverse connection from configuration :
-        /// 1. connectionStrings entry named by JobSettings.SelectedInstanceName (command line) or Crm.Instance.Name setting
-        /// 2. Crm.ConnectionString setting
-        /// 3. connectionStrings entry (selected in console if several are defined)
+        /// Initialize Dataverse connections from connectionStrings section, target connection is :
+        /// 1. Entry named by JobSettings.SelectedConnectionName (command line) or Target.Connection.Name setting
+        /// 2. Single entry, or entry selected in console if several are defined
+        /// Other entries are available with Connections (opened on first use)
         /// </summary>
         protected void InitializeOrganizationServiceManager()
         {
-            var instanceName = string.IsNullOrEmpty(JobSettings.SelectedInstanceName) ? JobSettings.CrmInstanceName : JobSettings.SelectedInstanceName;
-            var connection = ResolveConnectionString(instanceName, JobSettings.CrmConnectionString, JobSettings.GetConnectionStrings(), ConsoleHelper.ConnectionStringSelect);
-            if (connection.Name != null)
-            {
-                JobSettings.SelectedInstanceName = connection.Name;
-            }
-            InitializeOrganizationServiceManager(connection.ConnectionString);
+            var connectionStrings = JobSettings.GetDataverseConnectionStrings();
+            var requestedConnectionName = string.IsNullOrEmpty(JobSettings.SelectedConnectionName) ? JobSettings.TargetConnectionName : JobSettings.SelectedConnectionName;
+            var connectionName = ResolveConnectionName(requestedConnectionName, connectionStrings, ConsoleHelper.ConnectionStringSelect);
+
+            Connections = new ProxiesPoolManager(connectionStrings, Logger, JobSettings.AffinityCookieEnabled, JobSettings.ConnectionOptimizationsEnabled);
+            InitializeTargetConnection(connectionName);
         }
 
         /// <summary>
-        /// Resolve connection string to use (see InitializeOrganizationServiceManager)
+        /// Resolve target connection name (see InitializeOrganizationServiceManager)
         /// </summary>
-        /// <param name="instanceName">Requested connectionStrings entry name</param>
-        /// <param name="crmConnectionString">Crm.ConnectionString setting</param>
-        /// <param name="connectionStrings">connectionStrings section entries</param>
+        /// <param name="requestedConnectionName">Requested connectionStrings entry name</param>
+        /// <param name="connectionStrings">Dataverse connectionStrings entries</param>
         /// <param name="selector">Interactive selection when several entries are defined</param>
-        /// <returns>connectionStrings entry name (null for Crm.ConnectionString setting) and connection string</returns>
-        internal static (string Name, string ConnectionString) ResolveConnectionString(string instanceName, string crmConnectionString, Dictionary<string, string> connectionStrings, Func<List<string>, string> selector)
+        /// <returns>connectionStrings entry name</returns>
+        internal static string ResolveConnectionName(string requestedConnectionName, Dictionary<string, string> connectionStrings, Func<List<string>, string> selector)
         {
-            if (string.IsNullOrEmpty(instanceName))
+            if (connectionStrings.Count == 0)
             {
-                if (!string.IsNullOrEmpty(crmConnectionString))
-                {
-                    return (null, crmConnectionString);
-                }
+                throw new Exception("Dataverse connection is not defined : add connectionStrings section in configuration file!");
+            }
 
-                if (connectionStrings.Count == 0)
-                {
-                    throw new Exception("Dataverse connection is not defined : add Crm.ConnectionString setting or connectionStrings section in configuration file!");
-                }
-
+            if (string.IsNullOrEmpty(requestedConnectionName))
+            {
                 // Display connection strings selector
-                instanceName = (connectionStrings.Count == 1) ? connectionStrings.Keys.First() : selector(connectionStrings.Keys.ToList());
+                return (connectionStrings.Count == 1) ? connectionStrings.Keys.First() : selector(connectionStrings.Keys.ToList());
             }
 
-            if (!connectionStrings.TryGetValue(instanceName, out var connectionString))
+            var connectionName = connectionStrings.Keys.FirstOrDefault(k => string.Equals(k, requestedConnectionName, StringComparison.OrdinalIgnoreCase));
+            if (connectionName == null)
             {
-                throw new Exception($"Connection string '{instanceName}' is not defined in connectionStrings section! (Available : {string.Join(", ", connectionStrings.Keys)})");
+                throw new Exception($"Connection string '{requestedConnectionName}' is not defined in connectionStrings section! (Available : {string.Join(", ", connectionStrings.Keys)})");
             }
-            return (instanceName, connectionString);
+            return connectionName;
         }
 
         /// <summary>
-        /// Initialize Dataverse connection with given connection string
+        /// Initialize Dataverse connection with given connection string (ex : retrieved from a vault)
         /// </summary>
         /// <param name="connectionString"></param>
         protected void InitializeOrganizationServiceManager(string connectionString)
         {
-            JobSettings.SelectedConnectionString = connectionString;
-            ProxiesPool = new ProxiesPool(connectionString, this.Logger, JobSettings.AffinityCookieEnabled, JobSettings.ConnectionOptimizationsEnabled);
+            const string connectionName = "Target";
+            var connectionStrings = new Dictionary<string, string> { { connectionName, connectionString } };
+            Connections = new ProxiesPoolManager(connectionStrings, Logger, JobSettings.AffinityCookieEnabled, JobSettings.ConnectionOptimizationsEnabled);
+            InitializeTargetConnection(connectionName);
+        }
+
+        private void InitializeTargetConnection(string connectionName)
+        {
+            JobSettings.SelectedConnectionName = connectionName;
+            JobSettings.SelectedConnectionString = Connections.GetConnectionString(connectionName);
+            ProxiesPool = Connections.GetProxiesPool(connectionName);
             CallerId = ProxiesPool.MainProxy.CallerId;
-            Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");
+            Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} ({connectionName}) with user ID : {ProxiesPool.MainProxy.CallerId} !");
             Logger.LogInformation($"Server recommended degree of parallelism : {ProxiesPool.MainProxy.ServiceClient.RecommendedDegreesOfParallelism} (Process.Thread.Number = {JobSettings.ThreadNumber})");
+        }
+
+        /// <summary>
+        /// Parameters provided to data jobs (connections, logger...)
+        /// </summary>
+        /// <returns></returns>
+        protected JobProcessParameters CreateJobProcessParameters()
+        {
+            return new JobProcessParameters
+            {
+                ProxiesPool = ProxiesPool,
+                Connections = Connections,
+                Logger = Logger,
+                CallerId = CallerId
+            };
         }
 
         /// <summary>
         /// Close Dataverse connections
         /// </summary>
-        public void Dispose() => ProxiesPool?.Dispose();
+        public void Dispose() => Connections?.Dispose();
     }
 }

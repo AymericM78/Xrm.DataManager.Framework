@@ -65,8 +65,8 @@ namespace Xrm.DataManager.Framework
         {
             var contextProperties = new Dictionary<string, string>()
             {
-                { "Context.Crm.ConnectionString", MaskConnectionStringSecrets(jobSettings.SelectedConnectionString ?? jobSettings.CrmConnectionString) },
-                { "Context.Crm.Instance.Name", jobSettings.SelectedInstanceName },
+                { "Context.Crm.ConnectionString", MaskConnectionStringSecrets(jobSettings.SelectedConnectionString) },
+                { "Context.Target.Connection.Name", jobSettings.SelectedConnectionName },
                 { "Context.Job.Name", jobSettings.SelectedJobName },
                 { "Context.Job.Run.Id", jobSettings.RunId },
 
@@ -88,9 +88,13 @@ namespace Xrm.DataManager.Framework
                 { "Context.Computer.CurrentDirectory", Environment.CurrentDirectory }
             };
 
-            if (jobSettings.JobNamesDefined)
+            if (jobSettings.TargetJobNamesDefined)
             {
-                contextProperties.Add("Job.Names", jobSettings.JobNames);
+                contextProperties.Add("Context.Target.Job.Names", jobSettings.TargetJobNames);
+            }
+            if (!string.IsNullOrEmpty(jobSettings.SourceConnectionName))
+            {
+                contextProperties.Add("Context.Source.Connection.Name", jobSettings.SourceConnectionName);
             }
 
             return contextProperties;

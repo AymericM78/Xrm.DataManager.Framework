@@ -14,7 +14,18 @@ namespace Xrm.DataManager.Framework
             get;
         }
 
+        /// <summary>
+        /// Target connection (Target.Connection.Name)
+        /// </summary>
         protected ProxiesPool ProxiesPool
+        {
+            get;
+        }
+
+        /// <summary>
+        /// All connections by name (ex : Connections.GetProxiesPool("Prod") to read reference data from another instance)
+        /// </summary>
+        protected ProxiesPoolManager Connections
         {
             get;
         }
@@ -49,6 +60,7 @@ namespace Xrm.DataManager.Framework
         {
             JobSettings = jobSettings;
             ProxiesPool = parameters.ProxiesPool;
+            Connections = parameters.Connections;
             Logger = parameters.Logger;
             CallerId = parameters.CallerId;
             ConsoleHelper = new ConsoleHelper(Logger);

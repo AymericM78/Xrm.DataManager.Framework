@@ -45,7 +45,7 @@ namespace Xrm.DataManager.Framework
         /// Get file path where progress information is stored
         /// </summary>
         /// <returns></returns>
-        internal string GetProgressFilePath()
+        protected virtual string GetProgressFilePath()
         {
             string fileName = $"{this.GetType().Name}.txt";
             return Path.Combine(Environment.CurrentDirectory, fileName);

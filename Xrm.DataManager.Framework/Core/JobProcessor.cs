@@ -22,12 +22,7 @@ namespace Xrm.DataManager.Framework
 
         public void Execute<T>() where T : DataJobBase
         {
-            var parameters = new JobProcessParameters
-            {
-                ProxiesPool = ProxiesPool,
-                Logger = Logger,
-                CallerId = CallerId
-            };
+            var parameters = CreateJobProcessParameters();
 
             JobSettings.SelectedJobName = typeof(T).Name;
 

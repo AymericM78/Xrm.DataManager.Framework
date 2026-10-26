@@ -8,7 +8,15 @@ namespace Xrm.DataManager.Framework
 {
     public class JobSettings
     {
-        public string SelectedInstanceName
+        /// <summary>
+        /// connectionStrings entry reserved for Application Insights (not a Dataverse connection)
+        /// </summary>
+        public const string AppInsightsConnectionStringName = "AppInsights";
+
+        /// <summary>
+        /// Name of the Dataverse connection used by current processor (connectionStrings entry)
+        /// </summary>
+        public string SelectedConnectionName
         {
             get; set;
         }
@@ -35,17 +43,25 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
-        public string CrmConnectionString => GetConnectionStringParameter();
+        /// <summary>
+        /// Name of the connectionStrings entry to process (target)
+        /// </summary>
+        public string TargetConnectionName => GetOptionalParameter<string>("Target.Connection.Name");
 
         /// <summary>
-        /// Name of the connectionStrings entry to use
+        /// Name of the connectionStrings entry to read records from (synchronization jobs)
         /// </summary>
-        public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
+        public string SourceConnectionName => GetOptionalParameter<string>("Source.Connection.Name");
 
-        public string JobNames => GetOptionalParameter<string>("Job.Names");
+        /// <summary>
+        /// Jobs to run (class names separated with ',')
+        /// </summary>
+        public string TargetJobNames => GetOptionalParameter<string>("Target.Job.Names");
+
+        /// <summary>
+        /// connectionStrings entry named AppInsights, or APPLICATIONINSIGHTS_CONNECTION_STRING environment variable (Azure)
+        /// </summary>
         public string AppInsightsConnectionString => GetAppInsightsConnectionString();
-        [Obsolete("Instrumentation key ingestion is retired, use AppInsights.ConnectionString setting instead.")]
-        public string AppInsightsInstrumentationKey => GetAppInsightsTelemetryKey();
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 48);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
         public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 5);
@@ -65,10 +81,7 @@ namespace Xrm.DataManager.Framework
         public bool LogRecordAttributes => GetOptionalParameter<bool>("Logging.Record.Attributes", false);
 
 
-        public bool ConnectionStringDefined => (string.IsNullOrEmpty(CrmConnectionString) == false);
-
-        public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
-        public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);
+        public bool TargetJobNamesDefined => (string.IsNullOrEmpty(TargetJobNames) == false);
         public bool ApplicationInsightsEnabled => (string.IsNullOrEmpty(AppInsightsConnectionString) == false);
 
         const string DateFormat = "dd/MM/yyyy";
@@ -99,6 +112,19 @@ namespace Xrm.DataManager.Framework
                 connectionStrings[connectionString.Name] = connectionString.ConnectionString;
             }
             return connectionStrings;
+        }
+
+        /// <summary>
+        /// Get Dataverse connection strings (connectionStrings section without AppInsights entry)
+        /// </summary>
+        /// <returns>Connection strings by name</returns>
+        public static Dictionary<string, string> GetDataverseConnectionStrings() => GetDataverseConnectionStrings(GetConnectionStrings());
+
+        internal static Dictionary<string, string> GetDataverseConnectionStrings(Dictionary<string, string> connectionStrings)
+        {
+            var dataverseConnectionStrings = new Dictionary<string, string>(connectionStrings, StringComparer.OrdinalIgnoreCase);
+            dataverseConnectionStrings.Remove(AppInsightsConnectionStringName);
+            return dataverseConnectionStrings;
         }
 
         public static T GetMandatoryParameter<T>(string key) => GetParameter<T>(key, default, true);
@@ -164,44 +190,13 @@ namespace Xrm.DataManager.Framework
             throw new Exception($"Invalid configuration : setting '{key}' has not valid type!");
         }
 
-        private string GetConnectionStringParameter()
+        private static string GetAppInsightsConnectionString()
         {
-            string value = GetOptionalParameter<string>("Crm.ConnectionString");
+            var value = ConfigurationManager.ConnectionStrings[AppInsightsConnectionStringName]?.ConnectionString;
             if (string.IsNullOrEmpty(value))
             {
-                // XrmFramework compatibility
-                value = GetOptionalParameter<string>("Xrm");
-            }
-            return value;
-        }
-
-        private string GetAppInsightsConnectionString()
-        {
-            string value = GetOptionalParameter<string>("AppInsights.ConnectionString");
-            if (string.IsNullOrEmpty(value))
-            {
-                // Azure compatibility
-                value = GetOptionalParameter<string>("APPLICATIONINSIGHTS_CONNECTION_STRING");
-            }
-            if (string.IsNullOrEmpty(value))
-            {
-                // Legacy compatibility : build connection string from instrumentation key
-                var instrumentationKey = GetAppInsightsTelemetryKey();
-                if (!string.IsNullOrEmpty(instrumentationKey))
-                {
-                    value = $"InstrumentationKey={instrumentationKey}";
-                }
-            }
-            return value;
-        }
-
-        private string GetAppInsightsTelemetryKey()
-        {
-            string value = GetOptionalParameter<string>("AppInsights.Instrumentation.Key");
-            if (string.IsNullOrEmpty(value))
-            {
-                // Azure compatibility
-                value = GetOptionalParameter<string>("APPINSIGHTS_INSTRUMENTATIONKEY");
+                // Azure compatibility (App Service, Functions...)
+                value = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
             }
             return value;
         }

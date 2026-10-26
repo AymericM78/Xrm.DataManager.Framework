@@ -15,21 +15,9 @@ namespace Xrm.DataManager.Framework.UnitTests.Core
         private static string NoSelector(List<string> names) => throw new InvalidOperationException("Selector should not be called");
 
         [Fact]
-        public void Crm_ConnectionString_is_used_when_no_instance_is_requested()
+        public void Requested_connection_is_case_insensitive_and_returns_entry_name()
         {
-            var connection = ProcessorBase.ResolveConnectionString(null, "Url=https://setting.crm4.dynamics.com", TwoConnectionStrings(), NoSelector);
-
-            Assert.Null(connection.Name);
-            Assert.Equal("Url=https://setting.crm4.dynamics.com", connection.ConnectionString);
-        }
-
-        [Fact]
-        public void Requested_instance_wins_over_Crm_ConnectionString_and_is_case_insensitive()
-        {
-            var connection = ProcessorBase.ResolveConnectionString("uat", "Url=https://setting.crm4.dynamics.com", TwoConnectionStrings(), NoSelector);
-
-            Assert.Equal("uat", connection.Name);
-            Assert.Equal("Url=https://uat.crm4.dynamics.com", connection.ConnectionString);
+            Assert.Equal("Uat", ProcessorBase.ResolveConnectionName("uat", TwoConnectionStrings(), NoSelector));
         }
 
         [Fact]
@@ -37,23 +25,19 @@ namespace Xrm.DataManager.Framework.UnitTests.Core
         {
             var connectionStrings = new Dictionary<string, string> { { "Only", "Url=https://only.crm4.dynamics.com" } };
 
-            var connection = ProcessorBase.ResolveConnectionString(null, null, connectionStrings, NoSelector);
-
-            Assert.Equal("Only", connection.Name);
+            Assert.Equal("Only", ProcessorBase.ResolveConnectionName(null, connectionStrings, NoSelector));
         }
 
         [Fact]
         public void Several_entries_are_selected_by_user()
         {
-            var connection = ProcessorBase.ResolveConnectionString(null, null, TwoConnectionStrings(), names => names[1]);
-
-            Assert.Equal("Uat", connection.Name);
+            Assert.Equal("Uat", ProcessorBase.ResolveConnectionName(null, TwoConnectionStrings(), names => names[1]));
         }
 
         [Fact]
-        public void Unknown_instance_lists_available_entries()
+        public void Unknown_connection_lists_available_entries()
         {
-            var exception = Assert.Throws<Exception>(() => ProcessorBase.ResolveConnectionString("Prod", null, TwoConnectionStrings(), NoSelector));
+            var exception = Assert.Throws<Exception>(() => ProcessorBase.ResolveConnectionName("Prod", TwoConnectionStrings(), NoSelector));
 
             Assert.Contains("'Prod'", exception.Message);
             Assert.Contains("Dev, Uat", exception.Message);
@@ -62,9 +46,51 @@ namespace Xrm.DataManager.Framework.UnitTests.Core
         [Fact]
         public void Missing_configuration_is_explicit()
         {
-            var exception = Assert.Throws<Exception>(() => ProcessorBase.ResolveConnectionString(null, null, new Dictionary<string, string>(), NoSelector));
+            var exception = Assert.Throws<Exception>(() => ProcessorBase.ResolveConnectionName(null, new Dictionary<string, string>(), NoSelector));
 
-            Assert.Contains("Crm.ConnectionString", exception.Message);
+            Assert.Contains("connectionStrings", exception.Message);
+        }
+
+        [Fact]
+        public void AppInsights_entry_is_not_a_Dataverse_connection()
+        {
+            var connectionStrings = TwoConnectionStrings();
+            connectionStrings.Add("appinsights", "InstrumentationKey=00000000-0000-0000-0000-000000000000");
+
+            var dataverseConnectionStrings = JobSettings.GetDataverseConnectionStrings(connectionStrings);
+
+            Assert.Equal(new[] { "Dev", "Uat" }, dataverseConnectionStrings.Keys);
+            Assert.Equal(3, connectionStrings.Count);
+        }
+
+        [Fact]
+        public void AppInsights_connection_string_falls_back_to_Azure_environment_variable()
+        {
+            const string variable = "APPLICATIONINSIGHTS_CONNECTION_STRING";
+            var previousValue = Environment.GetEnvironmentVariable(variable);
+            try
+            {
+                Environment.SetEnvironmentVariable(variable, "InstrumentationKey=11111111-1111-1111-1111-111111111111");
+                var settings = new JobSettings();
+
+                Assert.True(settings.ApplicationInsightsEnabled);
+                Assert.Equal("InstrumentationKey=11111111-1111-1111-1111-111111111111", settings.AppInsightsConnectionString);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(variable, previousValue);
+            }
+        }
+
+        [Fact]
+        public void Connection_manager_rejects_unknown_connection_without_connecting()
+        {
+            var connections = new ProxiesPoolManager(TwoConnectionStrings(), new MemoryLogger());
+
+            var exception = Assert.Throws<Exception>(() => connections.GetProxiesPool("Prod"));
+
+            Assert.Contains("Available : Dev, Uat", exception.Message);
+            Assert.Equal("Url=https://uat.crm4.dynamics.com", connections.GetConnectionString("UAT"));
         }
 
         [Theory]

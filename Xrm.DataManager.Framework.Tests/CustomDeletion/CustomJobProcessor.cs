@@ -34,12 +34,7 @@ namespace Xrm.DataManager.Framework.Tests
 
         public void Execute()
         {
-            var parameters = new JobProcessParameters
-            {
-                ProxiesPool = ProxiesPool,
-                Logger = Logger,
-                CallerId = CallerId
-            };
+            var parameters = CreateJobProcessParameters();
 
             foreach (var item in BulkDeleteConfigurationData.Items)
             {
