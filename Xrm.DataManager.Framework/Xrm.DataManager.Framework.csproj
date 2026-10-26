@@ -13,7 +13,7 @@
     <PackageId>Xrm.DataManager.Framework</PackageId>
     <Title>Xrm.DataManager.Framework</Title>
     <Product>Xrm.DataManager.Framework</Product>
-    <Description>Dynamics 365 / PowerApps CDS class library for Data Management</Description>
+    <Description>Microsoft Dataverse framework for massive data operations : batch jobs with multi threading, retries and logging, synchronization and comparison between instances</Description>
     <PackageTags>Dynamics 365 PowerApps CDS Dataverse</PackageTags>
   </PropertyGroup>
 

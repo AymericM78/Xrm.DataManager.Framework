@@ -6,7 +6,7 @@
       SemVer : major.minor.patch (overridden by CI from git tag vX.Y.Z)
       Major starts at 2026 : previous date based versions (2022.x) would otherwise be considered as newer by NuGet
     -->
-    <Version>2026.0.1</Version>
+    <Version>2026.0.2</Version>
     <!-- Strong named assemblies : assembly version only changes with major version (no binding redirect between minor versions) -->
     <AssemblyVersion>$(Version.Split('.')[0]).0.0.0</AssemblyVersion>
     <FileVersion>$(Version.Split('-')[0]).0</FileVersion>
@@ -20,8 +20,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <!-- NuGet readme : README.md of each packable project (root README.md is the GitHub documentation) -->
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildProjectDirectory)\README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>
