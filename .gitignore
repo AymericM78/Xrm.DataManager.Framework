@@ -8,6 +8,7 @@ Instances.xml
 NugetPackage.bat
 Settings.config
 ConnectionStrings.config
+/artifacts/
 **/[Nn]u[Gg]et/*
 
 # User-specific files

@@ -2,12 +2,21 @@
 
   <!-- Shared by all projects : NuGet packages are released together with the same version -->
   <PropertyGroup>
-    <Version>2022.6.17.1850</Version>
+    <!--
+      SemVer : major.minor.patch (overridden by CI from git tag vX.Y.Z)
+      Major starts at 2026 : previous date based versions (2022.x) would otherwise be considered as newer by NuGet
+    -->
+    <Version>2026.0.0</Version>
+    <!-- Strong named assemblies : assembly version only changes with major version (no binding redirect between minor versions) -->
+    <AssemblyVersion>$(Version.Split('.')[0]).0.0.0</AssemblyVersion>
+    <FileVersion>$(Version.Split('-')[0]).0</FileVersion>
     <Authors>Aymeric Mouillé</Authors>
     <Company>DIMSI</Company>
     <Copyright>Copyright © 2020</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/AymericM78</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/AymericM78/Xrm.DataManager.Framework</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/AymericM78/Xrm.DataManager.Framework</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

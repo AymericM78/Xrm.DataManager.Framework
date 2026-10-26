@@ -57,7 +57,21 @@ namespace Xrm.DataManager.Framework
         /// <param name="callerId"></param>
         /// <returns></returns>
         public virtual QueryExpression GetQuery(Guid callerId) => throw new NotImplementedException();
-               
+
+        /// <summary>
+        /// Retrieve all records to process (default : GetQuery result with pagination)
+        /// Override to use another data source (ex : SQL with Xrm.DataManager.Framework.Tds package)
+        /// </summary>
+        /// <returns></returns>
+        protected virtual List<Entity> RetrieveRecords()
+        {
+            var query = GetQuery(CallerId);
+            query.PageInfo.Count = JobSettings.QueryRecordLimit;
+            query.NoLock = true;
+
+            return ProxiesPool.MainProxy.RetrieveAll(query).Entities.ToList();
+        }
+
         /// <summary>
         /// Specify task to run after record retrieve operation in order to allow collection operation (ie grouping ...)
         /// </summary>
@@ -96,17 +110,12 @@ namespace Xrm.DataManager.Framework
                 Logger.LogInformation($"File {ProgressFilePath} not detected! Start process from 0", base.ContextProperties);
             }
 
-            var jobName = GetName();
-            var query = GetQuery(CallerId);
-            query.PageInfo.Count = JobSettings.QueryRecordLimit;
-            query.NoLock = true;
-
-            var results = ProxiesPool.MainProxy.RetrieveAll(query);
-            Logger.LogInformation($"Retrieved {results.Entities.Count} records from CRM", base.ContextProperties);
+            var records = RetrieveRecords();
+            Logger.LogInformation($"Retrieved {records.Count} records from CRM", base.ContextProperties);
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
             // Materialize to prevent PrepareData from being evaluated twice (count and processing)
-            var data = PrepareData(results.Entities).ToList();
+            var data = PrepareData(records).ToList();
             var dataCount = data.Count;
             Logger.LogInformation($"{dataCount} records to process", base.ContextProperties);
 

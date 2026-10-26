@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
+    <RootNamespace>Xrm.DataManager.Framework</RootNamespace>
+    <AssemblyName>Xrm.DataManager.Framework.Tds</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Xrm.DataManager.Framework\Xrm.DataManager.Framework.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata (shared metadata in Directory.Build.props) -->
+  <PropertyGroup>
+    <PackageId>Xrm.DataManager.Framework.Tds</PackageId>
+    <Title>Xrm.DataManager.Framework.Tds</Title>
+    <Product>Xrm.DataManager.Framework</Product>
+    <Description>Retrieve Dataverse records with SQL (TDS endpoint) for Xrm.DataManager.Framework</Description>
+    <PackageTags>Dynamics 365 PowerApps CDS Dataverse TDS SQL</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Xrm.DataManager.Framework.UnitTests" Key="002400000480000094000000060200000024000052534131000400000100010065e44d3d68002e1f302fe3626c041689c5b1d919d4c172c54b0032044903ed8176f3998b352cf488e9121b91154f57ce53a9d5f96639a236b1576abf416104a6987161dac8e551d595cabfee5eaff5b1a1937456c7a420e1687ce32aeb868c6001dd4e21186dc3a3902fe1732547b560e6d93116d586fa0e9e17b2c81afed5c9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="180.140.0" />
+    <!-- Security fix : Microsoft.Data.SqlClient references a vulnerable version -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xrm.DataManager.Framework\Xrm.DataManager.Framework.csproj" />
+  </ItemGroup>
+
+</Project>

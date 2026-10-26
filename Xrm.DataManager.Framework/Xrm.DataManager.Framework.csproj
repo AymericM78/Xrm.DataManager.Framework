@@ -23,6 +23,10 @@
     <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.27" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Xrm.DataManager.Framework.UnitTests" Key="002400000480000094000000060200000024000052534131000400000100010065e44d3d68002e1f302fe3626c041689c5b1d919d4c172c54b0032044903ed8176f3998b352cf488e9121b91154f57ce53a9d5f96639a236b1576abf416104a6987161dac8e551d595cabfee5eaff5b1a1937456c7a420e1687ce32aeb868c6001dd4e21186dc3a3902fe1732547b560e6d93116d586fa0e9e17b2c81afed5c9" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <Reference Include="System.Configuration" />
     <Reference Include="System.ServiceModel" />

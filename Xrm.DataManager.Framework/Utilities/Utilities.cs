@@ -2,6 +2,7 @@
 using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.ServiceModel;
 using System.Text.RegularExpressions;
 
@@ -69,7 +70,7 @@ namespace Xrm.DataManager.Framework
                 { "Context.Job.Name", jobSettings.SelectedJobName },
                 { "Context.Job.Run.Id", jobSettings.RunId },
 
-                { "Context.Process.Version", typeof(Utilities).Assembly.GetName().Version.ToString() },
+                { "Context.Process.Version", GetFrameworkVersion() },
                 { "Context.Process.MaxDuration.Hours", jobSettings.MaxRunDurationInHour.ToString() },
                 { "Context.Process.Query.RecordLimit", jobSettings.QueryRecordLimit.ToString() },
                 { "Context.Process.Thread.Number", jobSettings.ThreadNumber.ToString() },
@@ -93,6 +94,17 @@ namespace Xrm.DataManager.Framework
             }
 
             return contextProperties;
+        }
+
+        /// <summary>
+        /// Get framework package version (assembly version only contains major version)
+        /// </summary>
+        /// <returns></returns>
+        public static string GetFrameworkVersion()
+        {
+            var assembly = typeof(Utilities).Assembly;
+            var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            return informationalVersion ?? assembly.GetName().Version.ToString();
         }
 
         /// <summary>

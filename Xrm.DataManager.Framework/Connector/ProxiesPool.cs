@@ -62,7 +62,7 @@ namespace Xrm.DataManager.Framework
             InitializeMainProxy();
         }
 
-        private string ExtractUrlFromConnectionString(string connectionString)
+        internal static string ExtractUrlFromConnectionString(string connectionString)
         {
             var maskedConnectionString = Utilities.MaskConnectionStringSecrets(connectionString);
             var builder = new DbConnectionStringBuilder();

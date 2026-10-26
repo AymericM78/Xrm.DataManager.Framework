@@ -71,7 +71,7 @@ namespace Xrm.DataManager.Framework
                 }
                 Logger.LogDisplay($"Choisir entre 1 et {dataJobs.Count}");
                 var choice = Console.ReadLine();
-                if (int.TryParse(choice, out index) && index <= dataJobs.Count)
+                if (int.TryParse(choice, out index) && index >= 1 && index <= dataJobs.Count)
                 {
                     valid = true;
                 }

@@ -1,6 +1,7 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Xrm.DataManager.Framework
@@ -95,15 +96,30 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         protected void InitializeOrganizationServiceManager()
         {
-            var connectionStrings = JobSettings.GetConnectionStrings();
-
             var instanceName = string.IsNullOrEmpty(JobSettings.SelectedInstanceName) ? JobSettings.CrmInstanceName : JobSettings.SelectedInstanceName;
+            var connection = ResolveConnectionString(instanceName, JobSettings.CrmConnectionString, JobSettings.GetConnectionStrings(), ConsoleHelper.ConnectionStringSelect);
+            if (connection.Name != null)
+            {
+                JobSettings.SelectedInstanceName = connection.Name;
+            }
+            InitializeOrganizationServiceManager(connection.ConnectionString);
+        }
+
+        /// <summary>
+        /// Resolve connection string to use (see InitializeOrganizationServiceManager)
+        /// </summary>
+        /// <param name="instanceName">Requested connectionStrings entry name</param>
+        /// <param name="crmConnectionString">Crm.ConnectionString setting</param>
+        /// <param name="connectionStrings">connectionStrings section entries</param>
+        /// <param name="selector">Interactive selection when several entries are defined</param>
+        /// <returns>connectionStrings entry name (null for Crm.ConnectionString setting) and connection string</returns>
+        internal static (string Name, string ConnectionString) ResolveConnectionString(string instanceName, string crmConnectionString, Dictionary<string, string> connectionStrings, Func<List<string>, string> selector)
+        {
             if (string.IsNullOrEmpty(instanceName))
             {
-                if (JobSettings.ConnectionStringDefined)
+                if (!string.IsNullOrEmpty(crmConnectionString))
                 {
-                    InitializeOrganizationServiceManager(JobSettings.CrmConnectionString);
-                    return;
+                    return (null, crmConnectionString);
                 }
 
                 if (connectionStrings.Count == 0)
@@ -112,15 +128,14 @@ namespace Xrm.DataManager.Framework
                 }
 
                 // Display connection strings selector
-                instanceName = (connectionStrings.Count == 1) ? connectionStrings.Keys.First() : ConsoleHelper.ConnectionStringSelect(connectionStrings.Keys.ToList());
+                instanceName = (connectionStrings.Count == 1) ? connectionStrings.Keys.First() : selector(connectionStrings.Keys.ToList());
             }
 
             if (!connectionStrings.TryGetValue(instanceName, out var connectionString))
             {
                 throw new Exception($"Connection string '{instanceName}' is not defined in connectionStrings section! (Available : {string.Join(", ", connectionStrings.Keys)})");
             }
-            JobSettings.SelectedInstanceName = instanceName;
-            InitializeOrganizationServiceManager(connectionString);
+            return (instanceName, connectionString);
         }
 
         /// <summary>

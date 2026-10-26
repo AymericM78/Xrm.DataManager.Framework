@@ -82,6 +82,15 @@ namespace Xrm.DataManager.Framework
                     PushMetric($"Crm.Record.{key}", value.ToString());
                 }
             }
+
+            // Formatted values without attribute (ex : records retrieved with SQL)
+            foreach (var formattedValue in record.FormattedValues)
+            {
+                if (!record.Attributes.ContainsKey(formattedValue.Key))
+                {
+                    PushMetric($"Crm.Record.{formattedValue.Key}", formattedValue.Value);
+                }
+            }
         }
 
         private void DumpProxyToMetrics(IManagedTokenOrganizationServiceProxy proxy)
