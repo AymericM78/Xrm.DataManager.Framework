@@ -1,6 +1,7 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.PowerPlatform.Dataverse.Client.Extensions;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
-using Microsoft.Xrm.Tooling.Connector;
 using System;
 using System.IdentityModel.Tokens;
 using System.Linq;
@@ -13,13 +14,16 @@ namespace Xrm.DataManager.Framework
     {
         private string CrmConnectionString;
 
-        public CrmServiceClient CrmServiceClient
+        public ServiceClient ServiceClient
         {
             get;
             set;
         }
 
-        private CrmServiceClient ParentCrmServiceClient
+        [Obsolete("Use ServiceClient instead.")]
+        public ServiceClient CrmServiceClient => ServiceClient;
+
+        private ServiceClient ParentServiceClient
         {
             get;
             set;
@@ -55,22 +59,22 @@ namespace Xrm.DataManager.Framework
 
         private bool IsCloneAvailable()
         {
-            if (ParentCrmServiceClient == null)
+            if (ParentServiceClient == null)
             {
                 return false;
             }
 
-            return (ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.OAuth
-                          || ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.ClientSecret
-                          || ParentCrmServiceClient.ActiveAuthenticationType == Microsoft.Xrm.Tooling.Connector.AuthenticationType.Certificate);
+            return (ParentServiceClient.ActiveAuthenticationType == Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType.OAuth
+                          || ParentServiceClient.ActiveAuthenticationType == Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType.ClientSecret
+                          || ParentServiceClient.ActiveAuthenticationType == Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType.Certificate);
         }
 
-        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger, Guid callerId, CrmServiceClient parentClient = null)
+        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger, Guid callerId, ServiceClient parentClient = null)
         {
             CrmConnectionString = crmConnectionString;
             Logger = logger;
             CallerId = callerId;
-            ParentCrmServiceClient = parentClient;
+            ParentServiceClient = parentClient;
             InitializeClient();
         }
 
@@ -78,9 +82,9 @@ namespace Xrm.DataManager.Framework
         {
             if (forceReconnect)
             {
-                if (ParentCrmServiceClient != null)
+                if (ParentServiceClient != null)
                 {
-                    ParentCrmServiceClient = new CrmServiceClient(CrmConnectionString);
+                    ParentServiceClient = new ServiceClient(CrmConnectionString);
                 }
             }
 
@@ -88,10 +92,10 @@ namespace Xrm.DataManager.Framework
             {
                 Retry(() =>
                 {
-                    CrmServiceClient = ParentCrmServiceClient.Clone();
-                    if (CrmServiceClient.LastCrmException != null)
+                    ServiceClient = ParentServiceClient.Clone();
+                    if (!ServiceClient.IsReady)
                     {
-                        throw CrmServiceClient.LastCrmException;
+                        throw ServiceClient.LastException ?? new Exception(ServiceClient.LastError);
                     }
                     return true;
                 });
@@ -100,63 +104,63 @@ namespace Xrm.DataManager.Framework
             {
                 Retry(() =>
                 {
-                    CrmServiceClient = new CrmServiceClient(CrmConnectionString);
-                    if (CrmServiceClient.LastCrmException != null)
+                    ServiceClient = new ServiceClient(CrmConnectionString);
+                    if (!ServiceClient.IsReady)
                     {
-                        throw CrmServiceClient.LastCrmException;
+                        throw ServiceClient.LastException ?? new Exception(ServiceClient.LastError);
                     }
                     return true;
                 });
             }
 
-            if (CallerId == null)
+            if (CallerId == Guid.Empty)
             {
-                CallerId = CrmServiceClient.GetMyCrmUserId();
+                CallerId = ServiceClient.GetMyUserId();
             }
 
-            ActiveAuthenticationType = CrmServiceClient.ActiveAuthenticationType.ToString();
-            ConnectedOrgFriendlyName = CrmServiceClient.ConnectedOrgFriendlyName;
-            EndpointUrl = CrmServiceClient.ConnectedOrgPublishedEndpoints.Values.FirstOrDefault();
+            ActiveAuthenticationType = ServiceClient.ActiveAuthenticationType.ToString();
+            ConnectedOrgFriendlyName = ServiceClient.ConnectedOrgFriendlyName;
+            EndpointUrl = ServiceClient.ConnectedOrgPublishedEndpoints.Values.FirstOrDefault();
         }
 
         public Guid Create(Entity entity)
         {
-            return Retry(() => { return CrmServiceClient.Create(entity); });
+            return Retry(() => { return ServiceClient.Create(entity); });
         }
 
         public Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
         {
-            return Retry(() => { return CrmServiceClient.Retrieve(entityName, id, columnSet); });
+            return Retry(() => { return ServiceClient.Retrieve(entityName, id, columnSet); });
         }
 
         public void Update(Entity entity)
         {
-            Retry(() => { CrmServiceClient.Update(entity); return true; });
+            Retry(() => { ServiceClient.Update(entity); return true; });
         }
 
         public void Delete(string entityName, Guid id)
         {
-            Retry(() => { CrmServiceClient.Delete(entityName, id); return true; });
+            Retry(() => { ServiceClient.Delete(entityName, id); return true; });
         }
 
         public OrganizationResponse Execute(OrganizationRequest request)
         {
-            return Retry(() => { return CrmServiceClient.Execute(request); });
+            return Retry(() => { return ServiceClient.Execute(request); });
         }
 
         public void Associate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
-            Retry(() => { CrmServiceClient.Associate(entityName, entityId, relationship, relatedEntities); return true; });
+            Retry(() => { ServiceClient.Associate(entityName, entityId, relationship, relatedEntities); return true; });
         }
 
         public void Disassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
         {
-            Retry(() => { CrmServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities); return true; });
+            Retry(() => { ServiceClient.Disassociate(entityName, entityId, relationship, relatedEntities); return true; });
         }
 
         public EntityCollection RetrieveMultiple(QueryBase query)
         {
-            return Retry(() => { return CrmServiceClient.RetrieveMultiple(query); });
+            return Retry(() => { return ServiceClient.RetrieveMultiple(query); });
         }
 
         /// <summary>
@@ -181,7 +185,7 @@ namespace Xrm.DataManager.Framework
             return results;
         }
 
-        public void Dispose() => CrmServiceClient.Dispose();
+        public void Dispose() => ServiceClient.Dispose();
 
         private T Retry<T>(Func<T> action)
         {

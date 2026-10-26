@@ -34,6 +34,11 @@ namespace Xrm.DataManager.Framework
 
         public virtual void LogFailure(Exception exception) => LogFailure(exception, new Dictionary<string, string>());
 
+        public virtual void Flush()
+        {
+            // Nothing to flush by default
+        }
+
         public abstract void LogFailure(Exception exception, Dictionary<string, string> properties);
 
         public abstract void LogInformation(string message, bool display = true);

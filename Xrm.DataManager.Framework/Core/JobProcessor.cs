@@ -30,6 +30,7 @@ namespace Xrm.DataManager.Framework
             catch (Exception ex)
             {
                 Logger.LogFailure(ex);
+                Logger.Flush();
                 Console.WriteLine($"Job failed : {dataJobInstance.GetName()} => Catastrophic error : {ex.Message}!");
                 throw ex;
             }

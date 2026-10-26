@@ -1,6 +1,6 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
-using Microsoft.Xrm.Tooling.Connector;
 using System;
 
 namespace Xrm.DataManager.Framework
@@ -10,7 +10,9 @@ namespace Xrm.DataManager.Framework
         string ActiveAuthenticationType { get; set; }
         Guid CallerId { get; set; }
         string ConnectedOrgFriendlyName { get; set; }
-        CrmServiceClient CrmServiceClient { get; set; }
+        ServiceClient ServiceClient { get; set; }
+        [Obsolete("Use ServiceClient instead.")]
+        ServiceClient CrmServiceClient { get; }
         string EndpointUrl { get; set; }
 
         EntityCollection RetrieveAll(QueryExpression query);

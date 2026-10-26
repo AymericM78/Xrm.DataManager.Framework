@@ -62,15 +62,23 @@ namespace Xrm.DataManager.Framework
 
             Logger.LogInformation($"Job start : {JobSettings.SelectedJobName}", selectedDataJob.ContextProperties);
 
-            // Pre Operation
-            selectedDataJob.PreOperation(ProxiesPool.MainProxy);
+            try
+            {
+                // Pre Operation
+                selectedDataJob.PreOperation(ProxiesPool.MainProxy);
 
-            // Run the main process
-            selectedDataJob.Run();
+                // Run the main process
+                selectedDataJob.Run();
 
-            // Post Operation
-            selectedDataJob.PostOperation(ProxiesPool.MainProxy);
-            Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}", selectedDataJob.ContextProperties);
+                // Post Operation
+                selectedDataJob.PostOperation(ProxiesPool.MainProxy);
+                Logger.LogInformation($"Job stop : {JobSettings.SelectedJobName}", selectedDataJob.ContextProperties);
+            }
+            finally
+            {
+                // Send buffered telemetry
+                Logger.Flush();
+            }
         }
 
         /// <summary>

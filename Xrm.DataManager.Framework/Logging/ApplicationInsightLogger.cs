@@ -9,6 +9,7 @@ namespace Xrm.DataManager.Framework
     public class ApplicationInsightLogger : BaseLogger, ILogger
     {
         protected TelemetryClient TelemetryClient;
+        protected TelemetryConfiguration TelemetryConfiguration;
 
         /// <summary>
         /// Constructor
@@ -24,9 +25,16 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         private void InitializeClient()
         {
-            TelemetryClient = new TelemetryClient();
-            TelemetryConfiguration.Active.InstrumentationKey = JobSettings.AppInsightsInstrumentationKey;
+            // Application Insights 3.x : TelemetryConfiguration.Active and instrumentation key are gone, a connection string is required
+            TelemetryConfiguration = TelemetryConfiguration.CreateDefault();
+            TelemetryConfiguration.ConnectionString = JobSettings.AppInsightsConnectionString;
+            TelemetryClient = new TelemetryClient(TelemetryConfiguration);
         }
+
+        /// <summary>
+        /// Send buffered telemetry (must be called before process exit)
+        /// </summary>
+        public override void Flush() => TelemetryClient.Flush();
 
         public override void LogVerbose(string message)
         {

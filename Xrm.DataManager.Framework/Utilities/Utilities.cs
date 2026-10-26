@@ -53,14 +53,14 @@ namespace Xrm.DataManager.Framework
                 { "Context.Job.Name", jobSettings.SelectedJobName },
                 { "Context.Job.Run.Id", jobSettings.RunId },
 
-                { "Context.Process.Version", Version.VersionNumber },
+                { "Context.Process.Version", typeof(Utilities).Assembly.GetName().Version.ToString() },
                 { "Context.Process.MaxDuration.Hours", jobSettings.MaxRunDurationInHour.ToString() },
                 { "Context.Process.Query.RecordLimit", jobSettings.QueryRecordLimit.ToString() },
                 { "Context.Process.Thread.Number", jobSettings.ThreadNumber.ToString() },
 
                 { "Context.Logging.Level", jobSettings.LogLevel.ToString() },
                 { "Context.Logging.AppInsight.Enabled", jobSettings.ApplicationInsightsEnabled.ToString() },
-                { "Context.Logging.AppInsight.InstrumentationKey", jobSettings.AppInsightsInstrumentationKey },
+                { "Context.Logging.AppInsight.ConnectionString", jobSettings.AppInsightsConnectionString },
                 { "Context.Logging.Graylog.Enabled", jobSettings.GrayLogEnabled.ToString() },
                 { "Context.Logging.Graylog.Url", jobSettings.GrayLogUrl },
 

@@ -36,6 +36,8 @@ namespace Xrm.DataManager.Framework
         public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
 
         public string JobNames => GetOptionalParameter<string>("Job.Names");
+        public string AppInsightsConnectionString => GetAppInsightsConnectionString();
+        [Obsolete("Instrumentation key ingestion is retired, use AppInsights.ConnectionString setting instead.")]
         public string AppInsightsInstrumentationKey => GetAppInsightsTelemetryKey();
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 48);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
@@ -48,7 +50,7 @@ namespace Xrm.DataManager.Framework
 
         public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
         public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);
-        public bool ApplicationInsightsEnabled => (string.IsNullOrEmpty(AppInsightsInstrumentationKey) == false);
+        public bool ApplicationInsightsEnabled => (string.IsNullOrEmpty(AppInsightsConnectionString) == false);
         public bool GrayLogEnabled => (string.IsNullOrEmpty(GrayLogUrl) == false);
 
         const string DateFormat = "dd/MM/yyyy";
@@ -132,6 +134,26 @@ namespace Xrm.DataManager.Framework
             {
                 // XrmFramework compatibility
                 value = GetOptionalParameter<string>("Xrm");
+            }
+            return value;
+        }
+
+        private string GetAppInsightsConnectionString()
+        {
+            string value = GetOptionalParameter<string>("AppInsights.ConnectionString");
+            if (string.IsNullOrEmpty(value))
+            {
+                // Azure compatibility
+                value = GetOptionalParameter<string>("APPLICATIONINSIGHTS_CONNECTION_STRING");
+            }
+            if (string.IsNullOrEmpty(value))
+            {
+                // Legacy compatibility : build connection string from instrumentation key
+                var instrumentationKey = GetAppInsightsTelemetryKey();
+                if (!string.IsNullOrEmpty(instrumentationKey))
+                {
+                    value = $"InstrumentationKey={instrumentationKey}";
+                }
             }
             return value;
         }

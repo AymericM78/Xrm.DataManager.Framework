@@ -109,6 +109,7 @@ namespace Xrm.DataManager.Framework
             }
             finally
             {
+                Logger.Flush();
                 try
                 {
                     ProxiesPool.MainProxy.Dispose();

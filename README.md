@@ -48,13 +48,13 @@ You need to specify following parameters in 'app.config':
 
 Parameter name|Default or available values|Description
 --------------|---------------------------|-----------
-Crm.ConnectionString|Specify connection string to Microsoft Dataverse
+Crm.ConnectionString|ex: `AuthType=ClientSecret;Url=https://org.crm.dynamics.com;ClientId=...;ClientSecret=...`|Specify connection string to Microsoft Dataverse ([Dataverse ServiceClient format](https://learn.microsoft.com/power-apps/developer/data-platform/xrm-tooling/use-connection-strings-xrm-tooling-connect) : OAuth, ClientSecret or Certificate, `Office365` / `IFD` are no longer supported)
 Job.Names|ex: DeleteAccountsJobs, DeleteContactsJob|Specify if you want to run multiple jobs (classe names splitted with ',')
 Process.Duration.MaxHours|Default: 8|Max job duration, to prevent nigh batch to run in prod during the day
 Process.Query.RecordLimit|Default: 2500|Records count to retrieve for each page (max 5000)
 Process.Thread.Number|Default: 10|Specify the number of threads to run
 LogLevel|Verbose = 0,<br/>Information = 1,<br/>ErrorsAndSuccess = 2,<br/>ErrorsOnly = 3|Tracing level
-AppInsights.Instrumentation.Key|Guid|Application Insights telemetry key
+AppInsights.ConnectionString|InstrumentationKey=...;IngestionEndpoint=...|Application Insights connection string (`AppInsights.Instrumentation.Key` is still read for compatibility but instrumentation key ingestion is retired)
 Graylog.Url|URL|Graylog Gelf endpoint URI
 
 ### Usage

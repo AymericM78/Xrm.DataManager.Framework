@@ -70,20 +70,21 @@ namespace Xrm.DataManager.Framework
 
         private void InitializeMainProxy()
         {
-            MainProxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, Guid.Empty);
-
-            if (MainProxy.CrmServiceClient.LastCrmException != null)
+            try
             {
-                Logger.LogInformation($"Failed to connect to CRM => {MainProxy.CrmServiceClient.LastCrmError}!");
-                throw MainProxy.CrmServiceClient.LastCrmException;
+                // Proxy throws if connection fails and resolves CallerId (WhoAmI) when Guid.Empty is provided
+                MainProxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, Guid.Empty);
             }
-
-            MainProxy.CallerId = MainProxy.CrmServiceClient.GetMyCrmUserId();
+            catch (Exception ex)
+            {
+                Logger.LogInformation($"Failed to connect to Dataverse => {ex.Message}!");
+                throw;
+            }
         }
 
         public IManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
         {
-            var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.CrmServiceClient);
+            var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.ServiceClient);
             return proxy;
         }
 

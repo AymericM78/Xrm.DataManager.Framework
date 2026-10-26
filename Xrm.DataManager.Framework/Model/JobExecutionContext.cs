@@ -70,9 +70,9 @@ namespace Xrm.DataManager.Framework
         private void DumpProxyToMetrics(IManagedTokenOrganizationServiceProxy proxy)
         {
             PushMetric($"Crm.CallerId", proxy.CallerId.ToString());
-            PushMetric($"Crm.Auth.Type", proxy.CrmServiceClient.ActiveAuthenticationType.ToString());
-            PushMetric($"Crm.Instance.Url", proxy.EndpointUrl);;
-            PushMetric($"Crm.Instance.DisplayName", proxy.CrmServiceClient.ConnectedOrgFriendlyName.ToString());
+            PushMetric($"Crm.Auth.Type", proxy.ActiveAuthenticationType);
+            PushMetric($"Crm.Instance.Url", proxy.EndpointUrl);
+            PushMetric($"Crm.Instance.DisplayName", proxy.ConnectedOrgFriendlyName);
         }
 
         public void PushMetric(string key, string value) => Properties.Add(key, value);
