@@ -3,11 +3,28 @@ using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
 using System.ServiceModel;
+using System.Text.RegularExpressions;
 
 namespace Xrm.DataManager.Framework
 {
     public static class Utilities
     {
+        private static readonly Regex ConnectionStringSecretsRegex = new Regex(@"(^|;)\s*(Password|ClientSecret|Secret)\s*=\s*('[^']*'|""[^""]*""|[^;]*)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// Hide credentials (password, client secret) from connection string before display or tracing
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <returns></returns>
+        public static string MaskConnectionStringSecrets(string connectionString)
+        {
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                return connectionString;
+            }
+            return ConnectionStringSecretsRegex.Replace(connectionString, "$1$2=********");
+        }
+
         /// <summary>
         /// Get unique identifier for this application execution
         /// </summary>
@@ -47,7 +64,7 @@ namespace Xrm.DataManager.Framework
         {
             var contextProperties = new Dictionary<string, string>()
             {
-                { "Context.Crm.ConnectionString", jobSettings.CrmConnectionString },
+                { "Context.Crm.ConnectionString", MaskConnectionStringSecrets(jobSettings.CrmConnectionString) },
                 { "Context.Crm.Instance.Name", jobSettings.SelectedInstanceName },
                 { "Context.Crm.User.Name", jobSettings.CrmUserName },
                 { "Context.Job.Name", jobSettings.SelectedJobName },
@@ -61,8 +78,7 @@ namespace Xrm.DataManager.Framework
                 { "Context.Logging.Level", jobSettings.LogLevel.ToString() },
                 { "Context.Logging.AppInsight.Enabled", jobSettings.ApplicationInsightsEnabled.ToString() },
                 { "Context.Logging.AppInsight.ConnectionString", jobSettings.AppInsightsConnectionString },
-                { "Context.Logging.Graylog.Enabled", jobSettings.GrayLogEnabled.ToString() },
-                { "Context.Logging.Graylog.Url", jobSettings.GrayLogUrl },
+                { "Context.Logging.Record.Attributes", jobSettings.LogRecordAttributes.ToString() },
 
                 { "Context.Computer.name", Environment.MachineName },
                 { "Context.Computer.OS.Version", Environment.OSVersion.Version.ToString() },

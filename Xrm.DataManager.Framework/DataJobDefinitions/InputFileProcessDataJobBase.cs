@@ -83,6 +83,7 @@ namespace Xrm.DataManager.Framework
             var stopwatch = Stopwatch.StartNew();
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
+            var logRecordAttributes = JobSettings.LogRecordAttributes;
 
             var linesToProcess = lines.Skip(1);
 
@@ -102,7 +103,7 @@ namespace Xrm.DataManager.Framework
                 },
                 (line, loopState, context) =>
                 {
-                    var jobExecutionContext = new JobExecutionContext(context.Proxy);
+                    var jobExecutionContext = new JobExecutionContext(context.Proxy, logRecordAttributes);
                     jobExecutionContext.PushMetrics(base.ContextProperties);
 
                     // Increment progress index

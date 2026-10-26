@@ -32,7 +32,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="3.2.0" />
     <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.27" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Serilog" Version="4.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
@@ -41,7 +40,6 @@
   <ItemGroup>
     <Reference Include="System.Configuration" />
     <Reference Include="System.IdentityModel" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
 

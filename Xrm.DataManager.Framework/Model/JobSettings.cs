@@ -42,8 +42,11 @@ namespace Xrm.DataManager.Framework
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 48);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
         public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 5);
-        public string GrayLogUrl => GetOptionalParameter<string>("Graylog.Url");
         public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
+        /// <summary>
+        /// Trace all record columns in telemetry (disabled by default : may contain personal data)
+        /// </summary>
+        public bool LogRecordAttributes => GetOptionalParameter<bool>("Logging.Record.Attributes", false);
 
 
         public bool ConnectionStringDefined => (string.IsNullOrEmpty(CrmConnectionString) == false);
@@ -51,7 +54,6 @@ namespace Xrm.DataManager.Framework
         public bool JobNamesDefined => (string.IsNullOrEmpty(JobNames) == false);
         public bool CrmInstanceNameDefined => (string.IsNullOrEmpty(CrmInstanceName) == false);
         public bool ApplicationInsightsEnabled => (string.IsNullOrEmpty(AppInsightsConnectionString) == false);
-        public bool GrayLogEnabled => (string.IsNullOrEmpty(GrayLogUrl) == false);
 
         const string DateFormat = "dd/MM/yyyy";
         static CultureInfo DateProvider = CultureInfo.InvariantCulture;

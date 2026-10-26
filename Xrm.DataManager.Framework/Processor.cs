@@ -105,7 +105,7 @@ namespace Xrm.DataManager.Framework
             {
                 Logger.LogFailure(ex);
                 Console.WriteLine($"Catastrophic error {ex.Message}!");
-                throw ex;
+                throw;
             }
             finally
             {

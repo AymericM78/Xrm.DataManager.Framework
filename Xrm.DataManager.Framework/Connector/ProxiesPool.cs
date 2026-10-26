@@ -49,7 +49,7 @@ namespace Xrm.DataManager.Framework
         {
             if (!connectionString.Contains("Url="))
             {
-                throw new ArgumentException($"Crm connectionstring is invalid : url parameter is not provided! '{connectionString}'");
+                throw new ArgumentException($"Crm connectionstring is invalid : url parameter is not provided! '{Utilities.MaskConnectionStringSecrets(connectionString)}'");
             }
 
             var parameters = connectionString.Split(';');

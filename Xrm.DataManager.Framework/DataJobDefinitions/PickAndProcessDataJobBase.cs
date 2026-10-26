@@ -52,6 +52,7 @@ namespace Xrm.DataManager.Framework
             // Initialize last result count to prevent infinite loop
             int lastRunCount = JobSettings.QueryRecordLimit;
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
+            var logRecordAttributes = JobSettings.LogRecordAttributes;
 
             int totalProcessed = 0;
             int totalSuccess = 0;
@@ -79,7 +80,7 @@ namespace Xrm.DataManager.Framework
                     },
                     (item, loopState, context) =>
                     {
-                        var jobExecutionContext = new JobExecutionContext(context.Proxy, item);
+                        var jobExecutionContext = new JobExecutionContext(context.Proxy, item, logRecordAttributes);
                         jobExecutionContext.PushMetrics(base.ContextProperties);
 
                         try

@@ -34,10 +34,6 @@ namespace Xrm.DataManager.Framework
             {
                 Logger = new ApplicationInsightLogger(JobSettings);
             }
-            else if (JobSettings.GrayLogEnabled)
-            {
-                Logger = new GrayLogger(JobSettings);
-            }
             else
             {
                 Logger = new FileLogger(JobSettings);

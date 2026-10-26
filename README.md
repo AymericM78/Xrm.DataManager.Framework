@@ -27,7 +27,7 @@ Nuget framework for massive Microsoft Dataverse data operations.
 - **Batching patterns** : Full, Delta, ...
 - **Performances** : Perf tuning, multi threading, ...
 - **Errors handling and retry** : API Limits catching and waits
-- **Tracing** : Supports file output, App Insights and Graylog...
+- **Tracing** : Supports file output and App Insights...
 - **Configuration management** : Simplified conf ...
 
 `Xrm.DataManager.Framework` is designed to simplify dev work by reducing core development and focus to functional implementation.
@@ -54,8 +54,8 @@ Process.Duration.MaxHours|Default: 8|Max job duration, to prevent nigh batch to 
 Process.Query.RecordLimit|Default: 2500|Records count to retrieve for each page (max 5000)
 Process.Thread.Number|Default: 10|Specify the number of threads to run
 LogLevel|Verbose = 0,<br/>Information = 1,<br/>ErrorsAndSuccess = 2,<br/>ErrorsOnly = 3|Tracing level
+Logging.Record.Attributes|Default: false|Trace all record columns in telemetry (record logical name and id are always traced). Keep disabled if records contain personal data
 AppInsights.ConnectionString|InstrumentationKey=...;IngestionEndpoint=...|Application Insights connection string (`AppInsights.Instrumentation.Key` is still read for compatibility but instrumentation key ingestion is retired)
-Graylog.Url|URL|Graylog Gelf endpoint URI
 
 ### Usage
 

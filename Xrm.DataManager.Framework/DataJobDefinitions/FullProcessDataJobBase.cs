@@ -110,6 +110,7 @@ namespace Xrm.DataManager.Framework
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
             var progressDisplayStep = (this.OverrideProgressDisplayStep.HasValue) ? this.OverrideProgressDisplayStep.Value : DefaultProgressDisplayStep;
+            var logRecordAttributes = JobSettings.LogRecordAttributes;
             Parallel.ForEach(data, 
             new ParallelOptions()
             {
@@ -125,7 +126,7 @@ namespace Xrm.DataManager.Framework
             },
             (item, loopState, context) =>
             {
-                var jobExecutionContext = new JobExecutionContext(context.Proxy, item);
+                var jobExecutionContext = new JobExecutionContext(context.Proxy, item, logRecordAttributes);
                 jobExecutionContext.PushMetrics(base.ContextProperties);
 
                 // Increment progress index

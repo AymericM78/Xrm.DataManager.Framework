@@ -19,22 +19,26 @@ namespace Xrm.DataManager.Framework
 
         private Dictionary<string, string> Properties;
 
+        private bool LogRecordAttributes;
+
         public JobExecutionContext()
         {
             Properties = new Dictionary<string, string>();
         }
-        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy)
+        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy, bool logRecordAttributes = false)
         {
             Proxy = proxy;
+            LogRecordAttributes = logRecordAttributes;
             Properties = new Dictionary<string, string>();
 
             DumpProxyToMetrics(proxy);
         }
 
-        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy, Entity record)
+        public JobExecutionContext(IManagedTokenOrganizationServiceProxy proxy, Entity record, bool logRecordAttributes = false)
         {
             Proxy = proxy;
             Record = record;
+            LogRecordAttributes = logRecordAttributes;
             Properties = new Dictionary<string, string>();
 
             PushRecordToMetrics(record);
@@ -43,6 +47,15 @@ namespace Xrm.DataManager.Framework
 
         public void PushRecordToMetrics(Entity record)
         {
+            PushMetric("Crm.Record.LogicalName", record.LogicalName);
+            PushMetric("Crm.Record.Id", record.Id.ToString());
+
+            // Record columns may contain personal data : only traced when explicitly enabled
+            if (!LogRecordAttributes)
+            {
+                return;
+            }
+
             foreach (var attribute in record.Attributes)
             {
                 var key = attribute.Key;
