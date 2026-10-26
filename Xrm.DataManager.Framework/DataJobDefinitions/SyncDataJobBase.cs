@@ -1,7 +1,6 @@
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
-using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +12,7 @@ namespace Xrm.DataManager.Framework
     /// Copy records from source connection (Source.Connection.Name) to target connection (Upsert with same id)
     /// Copied attributes : retrieved by GetQuery, not excluded (Sync.ExcludedAttributes), valid for update on target, lookups only if enabled
     /// </summary>
-    public abstract class SyncDataJobBase : FullProcessDataJobBase
+    public abstract class SyncDataJobBase : CrossInstanceDataJobBase
     {
         /// <summary>
         /// Excluded when Sync.ExcludedAttributes setting is not defined : system and ownership columns
@@ -50,19 +49,6 @@ namespace Xrm.DataManager.Framework
         public SyncDataJobBase(JobSettings jobSettings, JobProcessParameters parameters) : base(jobSettings, parameters)
         {
         }
-
-        /// <summary>
-        /// Records and columns to copy (executed on source connection)
-        /// </summary>
-        /// <param name="callerId">Source connection user id</param>
-        /// <returns></returns>
-        public abstract override QueryExpression GetQuery(Guid callerId);
-
-        /// <summary>
-        /// connectionStrings entry to read records from (default : Source.Connection.Name setting)
-        /// </summary>
-        /// <returns></returns>
-        public virtual string GetSourceConnectionName() => JobSettings.SourceConnectionName;
 
         /// <summary>
         /// Attributes never copied (default : Sync.ExcludedAttributes setting, or DefaultExcludedAttributes if not defined)
@@ -140,26 +126,11 @@ namespace Xrm.DataManager.Framework
                 return sourceRecords;
             }
 
-            var sourceConnectionName = GetSourceConnectionName();
-            if (string.IsNullOrEmpty(sourceConnectionName))
-            {
-                throw new Exception("Source connection is not defined : add Source.Connection.Name setting!");
-            }
-            if (string.Equals(sourceConnectionName, JobSettings.SelectedConnectionName, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new Exception($"Source and target connections must be different! ('{sourceConnectionName}')");
-            }
-
-            var sourceProxiesPool = Connections.GetProxiesPool(sourceConnectionName);
-            var query = GetQuery(sourceProxiesPool.MainProxy.CallerId);
-            query.PageInfo.Count = JobSettings.QueryRecordLimit;
-            query.NoLock = true;
-
+            var query = GetQuery(SourceProxiesPool.MainProxy.CallerId);
             excludedAttributes = new HashSet<string>(GetExcludedAttributes(), StringComparer.OrdinalIgnoreCase);
             targetAttributes = GetTargetAttributes(query.EntityName);
 
-            Logger.LogInformation($"Retrieving '{query.EntityName}' records from '{sourceConnectionName}' to synchronize with '{JobSettings.SelectedConnectionName}'", ContextProperties);
-            sourceRecords = sourceProxiesPool.MainProxy.RetrieveAll(query).Entities.ToList();
+            sourceRecords = RetrieveSourceRecords(query);
             return sourceRecords;
         }
 
@@ -216,14 +187,7 @@ namespace Xrm.DataManager.Framework
         /// <summary>
         /// Parse excluded attributes setting (comma separated, empty value : no exclusion)
         /// </summary>
-        internal static IEnumerable<string> ParseExcludedAttributes(string setting)
-        {
-            if (setting == null)
-            {
-                return DefaultExcludedAttributes;
-            }
-            return setting.Split(',').Select(a => a.Trim()).Where(a => a.Length > 0).ToList();
-        }
+        internal static IEnumerable<string> ParseExcludedAttributes(string setting) => Utilities.ParseAttributeNames(setting, DefaultExcludedAttributes);
 
         /// <summary>
         /// Build record sent to target with filtered source attributes

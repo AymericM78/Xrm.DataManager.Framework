@@ -63,14 +63,7 @@ namespace Xrm.DataManager.Framework
         /// Override to use another data source (ex : SQL with Xrm.DataManager.Framework.Tds package)
         /// </summary>
         /// <returns></returns>
-        protected virtual List<Entity> RetrieveRecords()
-        {
-            var query = GetQuery(CallerId);
-            query.PageInfo.Count = JobSettings.QueryRecordLimit;
-            query.NoLock = true;
-
-            return ProxiesPool.MainProxy.RetrieveAll(query).Entities.ToList();
-        }
+        protected virtual List<Entity> RetrieveRecords() => RetrieveAll(ProxiesPool, GetQuery(CallerId));
 
         /// <summary>
         /// Specify task to run after record retrieve operation in order to allow collection operation (ie grouping ...)

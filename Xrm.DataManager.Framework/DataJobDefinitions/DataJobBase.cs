@@ -1,6 +1,8 @@
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Xrm.DataManager.Framework
 {
@@ -102,5 +104,37 @@ namespace Xrm.DataManager.Framework
         }
 
         public abstract bool Run();
+
+        /// <summary>
+        /// Retrieve all records of given query (pagination with Process.Query.RecordLimit)
+        /// </summary>
+        /// <param name="proxiesPool">Connection to query (ex : ProxiesPool or Connections.GetProxiesPool("Prod"))</param>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        protected List<Entity> RetrieveAll(ProxiesPool proxiesPool, QueryExpression query)
+        {
+            query.PageInfo.Count = JobSettings.QueryRecordLimit;
+            query.NoLock = true;
+
+            return proxiesPool.MainProxy.RetrieveAll(query).Entities.ToList();
+        }
+
+        /// <summary>
+        /// Get connection to read records from (must be different from target connection)
+        /// </summary>
+        /// <param name="sourceConnectionName">connectionStrings entry name (ex : Source.Connection.Name setting)</param>
+        /// <returns></returns>
+        protected ProxiesPool GetSourceProxiesPool(string sourceConnectionName)
+        {
+            if (string.IsNullOrEmpty(sourceConnectionName))
+            {
+                throw new Exception("Source connection is not defined : add Source.Connection.Name setting!");
+            }
+            if (string.Equals(sourceConnectionName, JobSettings.SelectedConnectionName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new Exception($"Source and target connections must be different! ('{sourceConnectionName}')");
+            }
+            return Connections.GetProxiesPool(sourceConnectionName);
+        }
     }
 }

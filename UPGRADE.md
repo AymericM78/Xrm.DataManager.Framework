@@ -78,8 +78,9 @@ New settings (all optional) :
 
 Key|Default|Description
 ---|-------|-----------
-`Source.Connection.Name`|—|Connection to read records from (`SyncDataJobBase`)
+`Source.Connection.Name`|—|Connection to read records from (`CrossInstanceDataJobBase`, `SyncDataJobBase`, `CompareDataJobBase`)
 `Sync.ExcludedAttributes`|System and ownership columns|Attributes never copied by `SyncDataJobBase`
+`Compare.ExcludedAttributes`|System, ownership and technical columns|Attributes never compared by `CompareDataJobBase`
 `Logging.Record.Attributes`|`false`|Trace record columns in telemetry
 `Crm.AffinityCookie.Enabled`|`false`|Keep requests on the same Dataverse node
 `Process.ConnectionOptimizations.Enabled`|`true`|Apply process wide connection settings
@@ -133,9 +134,11 @@ Processors (`JobProcessor`, `Processor`, `ProcessorBase`) are now `IDisposable` 
 
 New extension points :
 
-- `DataJobBase.Connections` : other connections by name (`Connections.GetProxiesPool("Prod")`).
+- `DataJobBase.Connections` : other connections by name (`Connections.GetProxiesPool("Prod")`), `RetrieveAll(proxiesPool, query)` helper.
 - `FullProcessDataJobBase.RetrieveRecords()` and `GetProgressFilePath()` are overridable.
+- `CrossInstanceDataJobBase` : query records on a source instance and process them on the target instance.
 - `SyncDataJobBase` : copy records between instances.
+- `CompareDataJobBase` : compare records between instances (CSV report, optional processing of results).
 - `SqlFullProcessDataJobBase` and `TdsClient` (`Xrm.DataManager.Framework.Tds`) : retrieve records with SQL.
 
 ## 6. Behavior changes

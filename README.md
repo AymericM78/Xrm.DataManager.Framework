@@ -76,8 +76,9 @@ Parameter name|Default or available values|Description
 --------------|---------------------------|-----------
 Target.Connection.Name|ex: Dev|Name of the `connectionStrings` entry where jobs run
 Target.Job.Names|ex: DeleteAccountsJobs, DeleteContactsJob|Jobs to run with `Processor` (class names separated with ',')
-Source.Connection.Name|ex: Prod|Name of the `connectionStrings` entry to read records from (`SyncDataJobBase`)
+Source.Connection.Name|ex: Prod|Name of the `connectionStrings` entry to read records from (`CrossInstanceDataJobBase`, `SyncDataJobBase`, `CompareDataJobBase`)
 Sync.ExcludedAttributes|Default: createdon, modifiedon, createdby, modifiedby, createdonbehalfby, modifiedonbehalfby, ownerid, owningbusinessunit, owninguser, owningteam, transactioncurrencyid|Attributes never copied by `SyncDataJobBase` (separated with ',', replaces default list, empty value : no exclusion)
+Compare.ExcludedAttributes|Default: same as `Sync.ExcludedAttributes` + versionnumber, importsequencenumber, overriddencreatedon, timezoneruleversionnumber, utcconversiontimezonecode, exchangerate|Attributes never compared by `CompareDataJobBase` (separated with ',', replaces default list, empty value : no exclusion)
 Process.Duration.MaxHours|Default: 48|Max job duration, to prevent night batch to run in prod during the day
 Process.Query.RecordLimit|Default: 2500|Records count to retrieve for each page (max 5000)
 Process.Thread.Number|Default: 5|Specify the number of threads to run (server recommended value is displayed at startup)
@@ -108,12 +109,14 @@ using (var processor = new JobProcessor(settings => new ExtensionsLogger(setting
 
 ### Usage
 
-5 patterns are available:
+7 patterns are available:
 
 - `PickAndProcessDataJobBase` : Query X rows from given QueryExpression and process them then loop as long as data is retrieved.
 - `FullProcessDataJobBase` : Query all rows from given QueryExpression, load all data in memory and process.
 - `SqlFullProcessDataJobBase` (`Xrm.DataManager.Framework.Tds` package) : Same as `FullProcessDataJobBase` with rows retrieved by a SQL query.
+- `CrossInstanceDataJobBase` : Query rows on a source instance and process them on the target instance.
 - `SyncDataJobBase` : Copy rows from a source instance to the target instance.
+- `CompareDataJobBase` : Compare rows between a source instance and the target instance (only in source, only in target, different, equal).
 - `InputFileProcessDataJobBase` : Map a csv or txt file to table/columns and process each line.
 
 These patterns provide following overridable methods:
@@ -159,9 +162,37 @@ public class AnonymizeContactsJob : SqlFullProcessDataJobBase
 - SQL queries don't trigger RetrieveMultiple plugins, elastic tables aren't supported, avoid `NOLOCK` hint.
 - `TdsClient` can also be used directly (ex : `PreOperation`) to retrieve records or open a SQL connection.
 
+### Multi instance processing
+
+`CrossInstanceDataJobBase` retrieves records from source connection (`Source.Connection.Name`) and processes them on target connection :
+
+```csharp
+public class DeleteDeactivatedAccountsDataJob : CrossInstanceDataJobBase
+{
+    public DeleteDeactivatedAccountsDataJob(JobSettings jobSettings, JobProcessParameters parameters) : base(jobSettings, parameters) { }
+
+    public override string GetName() => "Delete accounts deactivated on source instance";
+
+    // Executed on source connection
+    public override QueryExpression GetQuery(Guid callerId)
+    {
+        var query = new QueryExpression("account");
+        query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 1);
+        return query;
+    }
+
+    // Record : source record / Proxy : target connection
+    public override void ProcessRecord(JobExecutionContext context) => context.Proxy.Delete(context.Record.LogicalName, context.Record.Id);
+}
+```
+
+- Multi threading, progress file (resume), errors handling and logging are the same as `FullProcessDataJobBase`.
+- `SourceProxiesPool` gives access to the source connection (ex : `TdsClient` to retrieve source records with SQL in `RetrieveRecords` override).
+- Any job can also use other connections with `Connections.GetProxiesPool("Name")`.
+
 ### Synchronization between instances
 
-`SyncDataJobBase` reads records from source connection (`Source.Connection.Name`) and upserts them on target connection with the same id :
+`SyncDataJobBase` (specialized `CrossInstanceDataJobBase`) reads records from source connection (`Source.Connection.Name`) and upserts them on target connection with the same id :
 
 ```csharp
 public class SyncAccountsDataJob : SyncDataJobBase
@@ -190,3 +221,35 @@ public class SyncAccountsDataJob : SyncDataJobBase
 - Options (overridable properties) : `IncludeEntityReferences` (copy lookups, default false), `TwoPassDependencies` (records without lookups, then lookups), `SyncState` (apply statecode / statuscode after upsert), `BypassCustomPluginExecution`.
 - `TransformRecord(sourceRecord, targetRecord)` allows to change values before upsert.
 - Multi threading, progress file (resume), errors handling and logging are the same as `FullProcessDataJobBase`.
+
+### Comparison between instances
+
+`CompareDataJobBase` retrieves records from source connection (`Source.Connection.Name`) and target connection (simultaneously), then compares them :
+
+```csharp
+public class CompareContactsDataJob : CompareDataJobBase
+{
+    public CompareContactsDataJob(JobSettings jobSettings, JobProcessParameters parameters) : base(jobSettings, parameters) { }
+
+    public override string GetName() => "Compare contacts";
+
+    // Executed on both connections (override GetTargetQuery for a different target query)
+    public override QueryExpression GetQuery(Guid callerId)
+    {
+        var query = new QueryExpression("contact");
+        query.ColumnSet.AddColumns("fullname", "emailaddress1", "telephone1", "parentcustomerid");
+        return query;
+    }
+
+    // Optional : delete on target the contacts missing on source
+    protected override bool ShouldProcess(DataCompareResult result) => result.Status == DataCompareStatus.OnlyInTarget;
+
+    protected override void ProcessResult(JobExecutionContext context, DataCompareResult result) => context.Proxy.Delete("contact", result.TargetRecord.Id);
+}
+```
+
+- Each record gets a status : `OnlyInSource`, `OnlyInTarget`, `Different` (with different attributes) or `Equal`. A summary is logged and a CSV report is written (`{JobClassName}_{RunId}.csv`, equal records excluded by default : `ReportEqualRecords`).
+- Records are matched by id (instances synchronized with `SyncDataJobBase` keep the same ids) : override `GetMatchingKey(record)` to use another key (ex : account number).
+- Compared attributes : retrieved by the queries, not excluded (`Compare.ExcludedAttributes`). Lookups are compared by id, choices and money by value, empty string equals null : override `AreEqual(attribute, sourceValue, targetValue)` to change it.
+- Read only by default : `ShouldProcess` / `ProcessResult` allow to process selected results on target connection (multi threaded, same errors handling and logging as other patterns).
+- Both tables are loaded in memory : restrict columns and rows in queries.

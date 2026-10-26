@@ -2,6 +2,7 @@
 using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.ServiceModel;
 using System.Text.RegularExpressions;
@@ -98,6 +99,21 @@ namespace Xrm.DataManager.Framework
             }
 
             return contextProperties;
+        }
+
+        /// <summary>
+        /// Parse attribute names setting (separated with ',')
+        /// </summary>
+        /// <param name="setting">Setting value (null : not defined, empty : no attribute)</param>
+        /// <param name="defaultAttributes">Returned if setting is not defined</param>
+        /// <returns></returns>
+        public static IEnumerable<string> ParseAttributeNames(string setting, IEnumerable<string> defaultAttributes)
+        {
+            if (setting == null)
+            {
+                return defaultAttributes;
+            }
+            return setting.Split(',').Select(a => a.Trim()).Where(a => a.Length > 0).ToList();
         }
 
         /// <summary>
