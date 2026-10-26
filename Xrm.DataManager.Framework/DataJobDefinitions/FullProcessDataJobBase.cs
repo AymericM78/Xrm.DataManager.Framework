@@ -82,13 +82,14 @@ namespace Xrm.DataManager.Framework
 
             Logger.LogInformation($"Checking {ProgressFilePath} existence...", base.ContextProperties);
             // Load already processed items from tracking file if exists
-            var processedItems = new List<string>();
+            // HashSet : lookup is done for each record by all threads
+            var processedItems = new HashSet<string>();
             if (File.Exists(ProgressFilePath))
             {
                 Logger.LogInformation($"File {ProgressFilePath} detected! Continue process at it last state", base.ContextProperties);
 
                 var lines = File.ReadAllLines(ProgressFilePath);
-                processedItems = lines.ToList();
+                processedItems = new HashSet<string>(lines);
             }
             else
             {
@@ -104,8 +105,9 @@ namespace Xrm.DataManager.Framework
             Logger.LogInformation($"Retrieved {results.Entities.Count} records from CRM", base.ContextProperties);
             var processedItemCount = 0;
             var stopwatch = Stopwatch.StartNew();
-            var data = PrepareData(results.Entities);
-            var dataCount = data.Count();
+            // Materialize to prevent PrepareData from being evaluated twice (count and processing)
+            var data = PrepareData(results.Entities).ToList();
+            var dataCount = data.Count;
             Logger.LogInformation($"{dataCount} records to process", base.ContextProperties);
 
             var threads = (this.OverrideThreadNumber.HasValue) ? this.OverrideThreadNumber : JobSettings.ThreadNumber;
@@ -130,12 +132,12 @@ namespace Xrm.DataManager.Framework
                 jobExecutionContext.PushMetrics(base.ContextProperties);
 
                 // Increment progress index
-                Interlocked.Increment(ref processedItemCount);
+                var currentItemIndex = Interlocked.Increment(ref processedItemCount);
 
                 // Increment progress bar every x records
-                if (processedItemCount % progressDisplayStep == 0)
+                if (currentItemIndex % progressDisplayStep == 0)
                 {
-                    Logger.LogInformation($"Processing record {processedItemCount} / {dataCount}", jobExecutionContext.DumpMetrics());
+                    Logger.LogInformation($"Processing record {currentItemIndex} / {dataCount}", jobExecutionContext.DumpMetrics());
                 }
 
                 // Exit if record has already been processed
@@ -166,11 +168,11 @@ namespace Xrm.DataManager.Framework
             },
             (context) =>
             {
-                context.Proxy.Dispose();
+                ProxiesPool.ReleaseProxy(context.Proxy);
             });
 
             stopwatch.Stop();
-            var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, results.Entities.Count);
+            var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, dataCount);
             Logger.LogInformation($"{dataCount} records processed in {stopwatch.Elapsed.TotalSeconds} => {stopwatch.Elapsed:g} [Speed = {speed}]!", base.ContextProperties);
 
             if (File.Exists(ProgressFilePath))

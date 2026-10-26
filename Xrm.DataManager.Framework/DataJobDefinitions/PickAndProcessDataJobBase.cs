@@ -111,7 +111,7 @@ namespace Xrm.DataManager.Framework
                     },
                     (context) =>
                     {
-                        context.Proxy.Dispose();
+                        ProxiesPool.ReleaseProxy(context.Proxy);
                     }
                 );
 

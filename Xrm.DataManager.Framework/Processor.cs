@@ -112,11 +112,11 @@ namespace Xrm.DataManager.Framework
                 Logger.Flush();
                 try
                 {
-                    ProxiesPool.MainProxy.Dispose();
+                    ProxiesPool.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to dispose MainProxy: {ex.Message}!");
+                    Console.WriteLine($"Failed to dispose connections: {ex.Message}!");
                 }
             }
 

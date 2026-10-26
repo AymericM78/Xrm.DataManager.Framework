@@ -14,6 +14,8 @@ namespace Xrm.DataManager.Framework
     {
         private string CrmConnectionString;
 
+        private bool EnableAffinityCookie;
+
         public ServiceClient ServiceClient
         {
             get;
@@ -69,12 +71,21 @@ namespace Xrm.DataManager.Framework
                           || ParentServiceClient.ActiveAuthenticationType == Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType.Certificate);
         }
 
-        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger, Guid callerId, ServiceClient parentClient = null)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="crmConnectionString"></param>
+        /// <param name="logger"></param>
+        /// <param name="callerId">Guid.Empty to resolve current user (WhoAmI)</param>
+        /// <param name="parentClient">Connection to clone (OAuth, ClientSecret or Certificate)</param>
+        /// <param name="enableAffinityCookie">Disable to spread parallel requests on all Dataverse nodes (bulk operations)</param>
+        public ManagedTokenOrganizationServiceProxy(string crmConnectionString, ILogger logger, Guid callerId, ServiceClient parentClient = null, bool enableAffinityCookie = true)
         {
             CrmConnectionString = crmConnectionString;
             Logger = logger;
             CallerId = callerId;
             ParentServiceClient = parentClient;
+            EnableAffinityCookie = enableAffinityCookie;
             InitializeClient();
         }
 
@@ -112,6 +123,9 @@ namespace Xrm.DataManager.Framework
                     return true;
                 });
             }
+
+            // Not copied by Clone()
+            ServiceClient.EnableAffinityCookie = EnableAffinityCookie;
 
             if (CallerId == Guid.Empty)
             {

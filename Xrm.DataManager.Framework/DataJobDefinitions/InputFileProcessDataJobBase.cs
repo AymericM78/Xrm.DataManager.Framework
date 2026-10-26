@@ -122,6 +122,7 @@ namespace Xrm.DataManager.Framework
 
                         // Retrieve CRM record based on current line
                         record = SearchRecord(context.Proxy, lineData);
+                        jobExecutionContext.Record = record;
                         jobExecutionContext.PushRecordToMetrics(record);
                         ProcessRecord(jobExecutionContext, lineData);
                         Logger.LogSuccess("Record processed with success!", jobExecutionContext.DumpMetrics());
@@ -166,7 +167,7 @@ namespace Xrm.DataManager.Framework
                 },
                 (context) =>
                 {
-                    context.Proxy.Dispose();
+                    ProxiesPool.ReleaseProxy(context.Proxy);
                 });
             stopwatch.Stop();
             var speed = Utilities.GetSpeed(stopwatch.Elapsed.TotalMilliseconds, lines.Count);

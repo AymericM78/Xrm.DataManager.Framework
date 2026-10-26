@@ -6,13 +6,13 @@ namespace Xrm.DataManager.Framework.Tests
 {
     class Program
     {
-        private static void RunJob<T>()
+        private static void RunJob<T>() where T : DataJobBase
         {
-            var jobProcessor = new JobProcessor();
-
-            var method = typeof(JobProcessor).GetMethod("Execute");
-            var constructedMethod = method.MakeGenericMethod(typeof(T));
-            constructedMethod.Invoke(jobProcessor, null);
+            // Dispose closes Dataverse connections
+            using (var jobProcessor = new JobProcessor())
+            {
+                jobProcessor.Execute<T>();
+            }
         }
 
         static void Main(string[] args)

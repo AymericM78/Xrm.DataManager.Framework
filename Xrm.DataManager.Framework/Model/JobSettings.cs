@@ -42,6 +42,10 @@ namespace Xrm.DataManager.Framework
         public int MaxRunDurationInHour => GetOptionalParameter<int>("Process.Duration.MaxHours", 48);
         public int QueryRecordLimit => GetOptionalParameter<int>("Process.Query.RecordLimit", 2500);
         public int ThreadNumber => GetOptionalParameter<int>("Process.Thread.Number", 5);
+        /// <summary>
+        /// Keep requests on the same Dataverse node (disabled by default : parallel requests are spread on all nodes)
+        /// </summary>
+        public bool AffinityCookieEnabled => GetOptionalParameter<bool>("Crm.AffinityCookie.Enabled", false);
         public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
         /// <summary>
         /// Trace all record columns in telemetry (disabled by default : may contain personal data)

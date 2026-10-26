@@ -66,6 +66,10 @@ namespace Xrm.DataManager.Framework
                 else
                 {
                     var value = record[key];
+                    if (value == null)
+                    {
+                        continue;
+                    }
                     if (value is EntityReference)
                     {
                         continue;
@@ -88,13 +92,16 @@ namespace Xrm.DataManager.Framework
             PushMetric($"Crm.Instance.DisplayName", proxy.ConnectedOrgFriendlyName);
         }
 
-        public void PushMetric(string key, string value) => Properties.Add(key, value);
+        /// <summary>
+        /// Add metric or overwrite its value if already defined
+        /// </summary>
+        public void PushMetric(string key, string value) => Properties.AddOrUpdate(key, value);
 
         public void PushMetrics(Dictionary<string, string> properties)
         {
             foreach (var property in properties)
             {
-                Properties.Add(property.Key, property.Value);
+                Properties.AddOrUpdate(property.Key, property.Value);
             }
         }
 

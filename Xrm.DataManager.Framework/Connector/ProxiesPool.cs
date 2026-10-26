@@ -1,11 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Net;
 using System.Threading;
 
 namespace Xrm.DataManager.Framework
 {
-    public class ProxiesPool
+    public class ProxiesPool : IDisposable
     {
+        // Dataverse connection string aliases for organization url
+        private static readonly string[] UrlParameterNames = { "ServiceUri", "Service Uri", "Url", "Server" };
+
         protected string ConnectionString
         {
             get; set;
@@ -29,43 +34,55 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
+        protected bool EnableAffinityCookie
+        {
+            get; set;
+        }
+
         public IManagedTokenOrganizationServiceProxy MainProxy
         {
             get;
             private set;
         }
 
-        public ProxiesPool(string connectionString, ILogger logger)
+        /// <summary>
+        /// Proxies released by threads and ready to be reused
+        /// </summary>
+        private readonly ConcurrentBag<IManagedTokenOrganizationServiceProxy> AvailableProxies = new ConcurrentBag<IManagedTokenOrganizationServiceProxy>();
+
+        public ProxiesPool(string connectionString, ILogger logger, bool enableAffinityCookie = false)
         {
             ConnectionString = connectionString;
             Logger = logger;
+            EnableAffinityCookie = enableAffinityCookie;
             InstanceUri = new Uri(ExtractUrlFromConnectionString(connectionString));
 
-            InitializeMainProxy();
+            // Must be applied before first connection to be effective
             ApplyConnectionOptimizations();
+            InitializeMainProxy();
         }
 
         private string ExtractUrlFromConnectionString(string connectionString)
         {
-            if (!connectionString.Contains("Url="))
+            var maskedConnectionString = Utilities.MaskConnectionStringSecrets(connectionString);
+            var builder = new DbConnectionStringBuilder();
+            try
             {
-                throw new ArgumentException($"Crm connectionstring is invalid : url parameter is not provided! '{Utilities.MaskConnectionStringSecrets(connectionString)}'");
+                builder.ConnectionString = connectionString;
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException($"Crm connectionstring is invalid : {ex.Message} '{maskedConnectionString}'");
             }
 
-            var parameters = connectionString.Split(';');
-            foreach (var parameter in parameters)
+            foreach (var parameterName in UrlParameterNames)
             {
-                var keyValue = parameter.Split('=');
-                if (string.IsNullOrEmpty(keyValue[0]))
-                    continue;
-
-                var paramKey = keyValue[0].Trim();
-                if (paramKey == "Url")
+                if (builder.TryGetValue(parameterName, out var url) && !string.IsNullOrWhiteSpace(url?.ToString()))
                 {
-                    return keyValue[1].Trim();
+                    return url.ToString().Trim();
                 }
             }
-            return null;
+            throw new ArgumentException($"Crm connectionstring is invalid : url parameter is not provided! '{maskedConnectionString}'");
         }
 
         private void InitializeMainProxy()
@@ -73,7 +90,7 @@ namespace Xrm.DataManager.Framework
             try
             {
                 // Proxy throws if connection fails and resolves CallerId (WhoAmI) when Guid.Empty is provided
-                MainProxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, Guid.Empty);
+                MainProxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, Guid.Empty, enableAffinityCookie: this.EnableAffinityCookie);
             }
             catch (Exception ex)
             {
@@ -82,10 +99,48 @@ namespace Xrm.DataManager.Framework
             }
         }
 
+        /// <summary>
+        /// Get a proxy from the pool or clone a new one from main proxy if none is available
+        /// Call ReleaseProxy when work is done to allow its reuse
+        /// </summary>
+        /// <returns></returns>
         public IManagedTokenOrganizationServiceProxy GetProxy(int retryCount = 0)
         {
-            var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.ServiceClient);
+            while (AvailableProxies.TryTake(out var availableProxy))
+            {
+                if (availableProxy.ServiceClient?.IsReady == true)
+                {
+                    return availableProxy;
+                }
+                availableProxy.Dispose();
+            }
+
+            var proxy = new ManagedTokenOrganizationServiceProxy(this.ConnectionString, this.Logger, MainProxy.CallerId, this.MainProxy.ServiceClient, this.EnableAffinityCookie);
             return proxy;
+        }
+
+        /// <summary>
+        /// Give back proxy to the pool for reuse
+        /// </summary>
+        /// <param name="proxy"></param>
+        public void ReleaseProxy(IManagedTokenOrganizationServiceProxy proxy)
+        {
+            if (proxy != null)
+            {
+                AvailableProxies.Add(proxy);
+            }
+        }
+
+        /// <summary>
+        /// Close all pooled connections and main connection
+        /// </summary>
+        public void Dispose()
+        {
+            while (AvailableProxies.TryTake(out var proxy))
+            {
+                proxy.Dispose();
+            }
+            MainProxy?.Dispose();
         }
 
         /// <summary>
@@ -108,7 +163,7 @@ namespace Xrm.DataManager.Framework
             // MS Support max recommended value = 12 * logical processors
             ServicePointManager.DefaultConnectionLimit = 12 * minWorker;
 
-            // Turn off the Expect 100 to continue message - 'true' will cause the caller to wait until it round-trip confirms a connection to the server 
+            // Turn off the Expect 100 to continue message - 'true' will cause the caller to wait until it round-trip confirms a connection to the server
             ServicePointManager.Expect100Continue = false;
 
             // More info on Nagle at WikiPedia - can help perf (helps w/ conn reliability)

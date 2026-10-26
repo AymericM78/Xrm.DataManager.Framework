@@ -4,7 +4,7 @@ using System;
 
 namespace Xrm.DataManager.Framework
 {
-    public abstract class ProcessorBase
+    public abstract class ProcessorBase : IDisposable
     {
         protected JobSettings JobSettings
         {
@@ -93,7 +93,6 @@ namespace Xrm.DataManager.Framework
                     JobSettings.SelectedInstanceName = instance.UniqueName;
                     if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
                     {
-                        ProxiesPool = new ProxiesPool(instance.ConnectionString, this.Logger);
                         InitializeOrganizationServiceManager(instance.ConnectionString);
                     }
                     else
@@ -110,8 +109,15 @@ namespace Xrm.DataManager.Framework
         /// <param name="connectionString"></param>
         protected void InitializeOrganizationServiceManager(string connectionString)
         {
-            ProxiesPool = new ProxiesPool(connectionString, this.Logger);
-            Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");            
+            ProxiesPool = new ProxiesPool(connectionString, this.Logger, JobSettings.AffinityCookieEnabled);
+            CallerId = ProxiesPool.MainProxy.CallerId;
+            Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");
+            Logger.LogInformation($"Server recommended degree of parallelism : {ProxiesPool.MainProxy.ServiceClient.RecommendedDegreesOfParallelism} (Process.Thread.Number = {JobSettings.ThreadNumber})");
         }
+
+        /// <summary>
+        /// Close Dataverse connections
+        /// </summary>
+        public void Dispose() => ProxiesPool?.Dispose();
     }
 }

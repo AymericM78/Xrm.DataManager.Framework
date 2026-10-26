@@ -52,7 +52,8 @@ Crm.ConnectionString|ex: `AuthType=ClientSecret;Url=https://org.crm.dynamics.com
 Job.Names|ex: DeleteAccountsJobs, DeleteContactsJob|Specify if you want to run multiple jobs (classe names splitted with ',')
 Process.Duration.MaxHours|Default: 8|Max job duration, to prevent nigh batch to run in prod during the day
 Process.Query.RecordLimit|Default: 2500|Records count to retrieve for each page (max 5000)
-Process.Thread.Number|Default: 10|Specify the number of threads to run
+Process.Thread.Number|Default: 5|Specify the number of threads to run (server recommended value is displayed at startup)
+Crm.AffinityCookie.Enabled|Default: false|Keep all requests on the same Dataverse node. Disabled by default to spread parallel requests on all nodes
 LogLevel|Verbose = 0,<br/>Information = 1,<br/>ErrorsAndSuccess = 2,<br/>ErrorsOnly = 3|Tracing level
 Logging.Record.Attributes|Default: false|Trace all record columns in telemetry (record logical name and id are always traced). Keep disabled if records contain personal data
 AppInsights.ConnectionString|InstrumentationKey=...;IngestionEndpoint=...|Application Insights connection string (`AppInsights.Instrumentation.Key` is still read for compatibility but instrumentation key ingestion is retired)

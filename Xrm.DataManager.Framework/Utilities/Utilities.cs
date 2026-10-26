@@ -74,6 +74,7 @@ namespace Xrm.DataManager.Framework
                 { "Context.Process.MaxDuration.Hours", jobSettings.MaxRunDurationInHour.ToString() },
                 { "Context.Process.Query.RecordLimit", jobSettings.QueryRecordLimit.ToString() },
                 { "Context.Process.Thread.Number", jobSettings.ThreadNumber.ToString() },
+                { "Context.Crm.AffinityCookie.Enabled", jobSettings.AffinityCookieEnabled.ToString() },
 
                 { "Context.Logging.Level", jobSettings.LogLevel.ToString() },
                 { "Context.Logging.AppInsight.Enabled", jobSettings.ApplicationInsightsEnabled.ToString() },
