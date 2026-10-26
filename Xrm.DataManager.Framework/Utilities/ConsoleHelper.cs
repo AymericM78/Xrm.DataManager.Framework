@@ -18,24 +18,35 @@ namespace Xrm.DataManager.Framework
         }
 
         /// <summary>
-        /// Display instance selection
+        /// Display connection string selection
         /// </summary>
-        /// <param name="instances"></param>
-        /// <returns></returns>
-        public Instance InstanceSelect(List<Instance> instances)
+        /// <param name="connectionStringNames"></param>
+        /// <returns>Selected connection string name</returns>
+        public string ConnectionStringSelect(List<string> connectionStringNames)
         {
-            Logger.LogDisplay($"Sélectionner l'instance cible : ");
-            int i = 1;
-            foreach (var instance in instances)
+            int index = 0;
+            var valid = false;
+            while (!valid)
             {
-                Logger.LogDisplay($" {i} : {instance.DisplayName}");
-                i++;
+                Logger.LogDisplay($"Sélectionner l'instance cible : ");
+                int i = 1;
+                foreach (var connectionStringName in connectionStringNames)
+                {
+                    Logger.LogDisplay($" {i} : {connectionStringName}");
+                    i++;
+                }
+                Logger.LogDisplay($"Choisir entre 1 et {connectionStringNames.Count}");
+                var choice = Console.ReadLine();
+                if (int.TryParse(choice, out index) && index >= 1 && index <= connectionStringNames.Count)
+                {
+                    valid = true;
+                }
+                else
+                {
+                    Logger.LogDisplay($"Choix invalide");
+                }
             }
-            Logger.LogDisplay($"Choisir entre 1 et {instances.Count}");
-            var choice = Console.ReadLine();
-            var index = int.Parse(choice);
-            var selectedInstance = instances[index - 1];
-            return selectedInstance;
+            return connectionStringNames[index - 1];
         }
 
         /// <summary>

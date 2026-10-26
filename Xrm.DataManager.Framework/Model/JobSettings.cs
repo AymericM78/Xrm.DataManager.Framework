@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Globalization;
 using System.Linq;
@@ -26,13 +27,19 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
+        /// <summary>
+        /// Connection string used by current processor
+        /// </summary>
+        public string SelectedConnectionString
+        {
+            get; set;
+        }
+
         public string CrmConnectionString => GetConnectionStringParameter();
 
-        [Obsolete("You must use connection string with oAuth.")]
-        public string CrmUserName => GetOptionalParameter<string>("Crm.User.Name");
-        [Obsolete("You must use connection string with oAuth.")]
-        public string CrmUserPassword => GetOptionalParameter<string>("Crm.User.Password");
-        [Obsolete("You must use connection string with oAuth.")]
+        /// <summary>
+        /// Name of the connectionStrings entry to use
+        /// </summary>
         public string CrmInstanceName => GetOptionalParameter<string>("Crm.Instance.Name");
 
         public string JobNames => GetOptionalParameter<string>("Job.Names");
@@ -46,6 +53,11 @@ namespace Xrm.DataManager.Framework
         /// Keep requests on the same Dataverse node (disabled by default : parallel requests are spread on all nodes)
         /// </summary>
         public bool AffinityCookieEnabled => GetOptionalParameter<bool>("Crm.AffinityCookie.Enabled", false);
+        /// <summary>
+        /// Apply process wide connection settings (thread pool, .NET Framework connection limit...)
+        /// Disable if host application manages them
+        /// </summary>
+        public bool ConnectionOptimizationsEnabled => GetOptionalParameter<bool>("Process.ConnectionOptimizations.Enabled", true);
         public int LogLevel => GetOptionalParameter<int>("LogLevel", 1);
         /// <summary>
         /// Trace all record columns in telemetry (disabled by default : may contain personal data)
@@ -68,6 +80,25 @@ namespace Xrm.DataManager.Framework
         public JobSettings()
         {
             RunId = Utilities.GetRunId();
+        }
+
+        /// <summary>
+        /// Get connection strings defined in configuration file (connectionStrings section)
+        /// </summary>
+        /// <returns>Connection strings by name</returns>
+        public static Dictionary<string, string> GetConnectionStrings()
+        {
+            var connectionStrings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ConnectionStringSettings connectionString in ConfigurationManager.ConnectionStrings)
+            {
+                // Ignore connection strings inherited from machine.config (ex : LocalSqlServer)
+                if (!connectionString.ElementInformation.IsPresent)
+                {
+                    continue;
+                }
+                connectionStrings[connectionString.Name] = connectionString.ConnectionString;
+            }
+            return connectionStrings;
         }
 
         public static T GetMandatoryParameter<T>(string key) => GetParameter<T>(key, default, true);

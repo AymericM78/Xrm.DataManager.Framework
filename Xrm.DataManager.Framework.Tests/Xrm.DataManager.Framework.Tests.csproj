@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Xrm.DataManager.Framework\Xrm.DataManager.Framework.csproj" />
+    <ProjectReference Include="..\Xrm.DataManager.Framework.ApplicationInsights\Xrm.DataManager.Framework.ApplicationInsights.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,7 +21,6 @@
   <ItemGroup>
     <!-- Local settings (git ignored) -->
     <None Update="Settings.config" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Instances.xml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

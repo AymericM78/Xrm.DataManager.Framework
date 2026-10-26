@@ -1,39 +1,50 @@
-using Serilog;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Xrm.DataManager.Framework
 {
+    /// <summary>
+    /// Default logger : write logs to {RunId}.log file in current directory (no dependency)
+    /// </summary>
     public class FileLogger : BaseLogger, ILogger
     {
+        // Shared by all instances : several processors may write in the same file
+        private static readonly object LockObject = new object();
+
+        protected string FilePath;
+
         /// <summary>
         /// Constructor
         /// </summary>
         public FileLogger(JobSettings jobSettings) : base(jobSettings)
         {
             JobSettings = jobSettings;
+            FilePath = Path.Combine(Environment.CurrentDirectory, $"{jobSettings.RunId}.log");
+        }
 
-            var loggerConfiguration = new LoggerConfiguration()
-                .WriteTo.Console(Serilog.Events.LogEventLevel.Error)
-                .WriteTo.File($"{jobSettings.RunId}.log");
+        /// <summary>
+        /// Append line to log file (logging must never stop the job)
+        /// </summary>
+        protected void Write(string level, string message, Exception exception = null)
+        {
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] {message}{Environment.NewLine}";
+            if (exception != null)
+            {
+                line += exception + Environment.NewLine;
+            }
 
-            if (LogLevel == LogLevel.Verbose)
+            try
             {
-                loggerConfiguration.MinimumLevel.Verbose();
+                lock (LockObject)
+                {
+                    File.AppendAllText(FilePath, line);
+                }
             }
-            else if (LogLevel == LogLevel.Information)
+            catch (Exception ex)
             {
-                loggerConfiguration.MinimumLevel.Information();
+                Console.WriteLine($"Failed to write log file {FilePath} : {ex.Message}");
             }
-            else if (LogLevel == LogLevel.ErrorsAndSuccess)
-            {
-                loggerConfiguration.MinimumLevel.Warning();
-            }
-            else if (LogLevel == LogLevel.ErrorsOnly)
-            {
-                loggerConfiguration.MinimumLevel.Error();
-            }
-            Log.Logger = loggerConfiguration.CreateLogger();
         }
 
         /// <summary>
@@ -46,7 +57,7 @@ namespace Xrm.DataManager.Framework
             {
                 return;
             }
-            Log.Verbose(message);
+            Write("VRB", message);
         }
 
         /// <summary>
@@ -63,11 +74,11 @@ namespace Xrm.DataManager.Framework
             {
                 return;
             }
-            Log.Information(message);
+            Write("INF", message);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="message"></param>
         /// <param name="properties"></param>
@@ -82,10 +93,13 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         /// <param name="message"></param>
         /// <param name="properties"></param>
-        /// <param name="jobName"></param>
         public override void LogSuccess(string message, Dictionary<string, string> properties)
         {
-            Log.Warning(message, properties);
+            if (LogLevel > LogLevel.ErrorsAndSuccess)
+            {
+                return;
+            }
+            Write("SUC", message);
         }
 
         /// <summary>
@@ -93,10 +107,10 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         /// <param name="exception"></param>
         /// <param name="properties"></param>
-        /// <param name="jobName"></param>
         public override void LogFailure(Exception exception, Dictionary<string, string> properties)
         {
-            Log.Error(exception, "Failure", properties);
+            Write("ERR", "Failure", exception);
+            Console.WriteLine(exception.Message);
         }
     }
 }

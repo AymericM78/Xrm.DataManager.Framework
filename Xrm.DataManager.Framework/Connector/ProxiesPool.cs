@@ -24,16 +24,6 @@ namespace Xrm.DataManager.Framework
             get; set;
         }
 
-        protected string UserName
-        {
-            get; set;
-        }
-
-        protected string Password
-        {
-            get; set;
-        }
-
         protected bool EnableAffinityCookie
         {
             get; set;
@@ -50,7 +40,14 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         private readonly ConcurrentBag<IManagedTokenOrganizationServiceProxy> AvailableProxies = new ConcurrentBag<IManagedTokenOrganizationServiceProxy>();
 
-        public ProxiesPool(string connectionString, ILogger logger, bool enableAffinityCookie = false)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="logger"></param>
+        /// <param name="enableAffinityCookie">Keep requests on the same Dataverse node</param>
+        /// <param name="applyConnectionOptimizations">Apply process wide connection settings (thread pool, .NET Framework connection limit...)</param>
+        public ProxiesPool(string connectionString, ILogger logger, bool enableAffinityCookie = false, bool applyConnectionOptimizations = true)
         {
             ConnectionString = connectionString;
             Logger = logger;
@@ -58,7 +55,10 @@ namespace Xrm.DataManager.Framework
             InstanceUri = new Uri(ExtractUrlFromConnectionString(connectionString));
 
             // Must be applied before first connection to be effective
-            ApplyConnectionOptimizations();
+            if (applyConnectionOptimizations)
+            {
+                ApplyConnectionOptimizations();
+            }
             InitializeMainProxy();
         }
 
@@ -148,8 +148,7 @@ namespace Xrm.DataManager.Framework
         /// </summary>
         protected void ApplyConnectionOptimizations()
         {
-            // If you're using an old version of .NET this will enable TLS 1.2
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            // TLS version is not forced anymore : .NET Framework 4.7+ uses OS defaults (TLS 1.2 / 1.3)
 
             // Get the current settings for the Thread Pool
             ThreadPool.GetMinThreads(out int minWorker, out int minIOC);
@@ -158,6 +157,9 @@ namespace Xrm.DataManager.Framework
             const int numberRequests = 64;
             // without setting the thread pool up, there was enough of a delay to cause timeouts!
             ThreadPool.SetMinThreads(numberRequests, minIOC);
+
+#if NETFRAMEWORK
+            // ServicePointManager only applies to .NET Framework (HttpWebRequest), .NET uses HttpClient defaults
 
             // Change max connections from .NET to a remote service default: 2
             // MS Support max recommended value = 12 * logical processors
@@ -177,6 +179,7 @@ namespace Xrm.DataManager.Framework
                 knownServicePointConnection.Expect100Continue = ServicePointManager.Expect100Continue;
                 knownServicePointConnection.UseNagleAlgorithm = ServicePointManager.UseNagleAlgorithm;
             }
+#endif
         }
     }
 }

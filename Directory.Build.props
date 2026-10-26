@@ -1,0 +1,18 @@
+<Project>
+
+  <!-- Shared by all projects : NuGet packages are released together with the same version -->
+  <PropertyGroup>
+    <Version>2022.6.17.1850</Version>
+    <Authors>Aymeric Mouillé</Authors>
+    <Company>DIMSI</Company>
+    <Copyright>Copyright © 2020</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/AymericM78</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

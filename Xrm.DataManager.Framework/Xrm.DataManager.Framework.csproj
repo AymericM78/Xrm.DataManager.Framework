@@ -1,46 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
     <RootNamespace>Xrm.DataManager.Framework</RootNamespace>
     <AssemblyName>Xrm.DataManager.Framework</AssemblyName>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>Xrm.DataManager.Framework.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
-  <!-- Assembly & NuGet package metadata -->
+  <!-- NuGet package metadata (shared metadata in Directory.Build.props) -->
   <PropertyGroup>
-    <Version>2022.6.17.1850</Version>
     <PackageId>Xrm.DataManager.Framework</PackageId>
     <Title>Xrm.DataManager.Framework</Title>
     <Product>Xrm.DataManager.Framework</Product>
     <Description>Dynamics 365 / PowerApps CDS class library for Data Management</Description>
-    <Authors>Aymeric Mouillé</Authors>
-    <Company>DIMSI</Company>
-    <Copyright>Copyright © 2020</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/AymericM78</PackageProjectUrl>
     <PackageTags>Dynamics 365 PowerApps CDS Dataverse</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
-  </ItemGroup>
 
   <!-- Direct dependencies only: transitive packages are resolved by the consuming application -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
     <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.27" />
-    <PackageReference Include="Serilog" Version="4.4.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <Reference Include="System.Configuration" />
-    <Reference Include="System.IdentityModel" />
     <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.14" />
+    <!-- Security fixes : Dataverse.Client depends on System.ServiceModel 8.1.2 which references vulnerable versions -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

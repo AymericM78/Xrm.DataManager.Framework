@@ -4,7 +4,18 @@ namespace Xrm.DataManager.Framework
 {
     public class JobProcessor : ProcessorBase
     {
-        public JobProcessor()
+        /// <summary>
+        /// Constructor with default logger (FileLogger)
+        /// </summary>
+        public JobProcessor() : this(null)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="loggerFactory">ex : settings => new ApplicationInsightLogger(settings)</param>
+        public JobProcessor(Func<JobSettings, ILogger> loggerFactory) : base(loggerFactory)
         {
             InitializeOrganizationServiceManager();
         }

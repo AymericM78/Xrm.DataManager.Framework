@@ -64,9 +64,8 @@ namespace Xrm.DataManager.Framework
         {
             var contextProperties = new Dictionary<string, string>()
             {
-                { "Context.Crm.ConnectionString", MaskConnectionStringSecrets(jobSettings.CrmConnectionString) },
+                { "Context.Crm.ConnectionString", MaskConnectionStringSecrets(jobSettings.SelectedConnectionString ?? jobSettings.CrmConnectionString) },
                 { "Context.Crm.Instance.Name", jobSettings.SelectedInstanceName },
-                { "Context.Crm.User.Name", jobSettings.CrmUserName },
                 { "Context.Job.Name", jobSettings.SelectedJobName },
                 { "Context.Job.Run.Id", jobSettings.RunId },
 
@@ -74,6 +73,7 @@ namespace Xrm.DataManager.Framework
                 { "Context.Process.MaxDuration.Hours", jobSettings.MaxRunDurationInHour.ToString() },
                 { "Context.Process.Query.RecordLimit", jobSettings.QueryRecordLimit.ToString() },
                 { "Context.Process.Thread.Number", jobSettings.ThreadNumber.ToString() },
+                { "Context.Process.ConnectionOptimizations.Enabled", jobSettings.ConnectionOptimizationsEnabled.ToString() },
                 { "Context.Crm.AffinityCookie.Enabled", jobSettings.AffinityCookieEnabled.ToString() },
 
                 { "Context.Logging.Level", jobSettings.LogLevel.ToString() },

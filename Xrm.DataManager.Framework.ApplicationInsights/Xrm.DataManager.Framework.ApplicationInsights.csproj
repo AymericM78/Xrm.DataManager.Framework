@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
+    <RootNamespace>Xrm.DataManager.Framework</RootNamespace>
+    <AssemblyName>Xrm.DataManager.Framework.ApplicationInsights</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Xrm.DataManager.Framework\Xrm.DataManager.Framework.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata (shared metadata in Directory.Build.props) -->
+  <PropertyGroup>
+    <PackageId>Xrm.DataManager.Framework.ApplicationInsights</PackageId>
+    <Title>Xrm.DataManager.Framework.ApplicationInsights</Title>
+    <Product>Xrm.DataManager.Framework</Product>
+    <Description>Application Insights logger for Xrm.DataManager.Framework</Description>
+    <PackageTags>Dynamics 365 PowerApps CDS Dataverse ApplicationInsights</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xrm.DataManager.Framework\Xrm.DataManager.Framework.csproj" />
+  </ItemGroup>
+
+</Project>

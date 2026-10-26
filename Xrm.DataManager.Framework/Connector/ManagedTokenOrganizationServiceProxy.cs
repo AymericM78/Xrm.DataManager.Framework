@@ -3,10 +3,8 @@ using Microsoft.PowerPlatform.Dataverse.Client.Extensions;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System;
-using System.IdentityModel.Tokens;
 using System.Linq;
 using System.ServiceModel;
-using System.ServiceModel.Security;
 
 namespace Xrm.DataManager.Framework
 {
@@ -89,16 +87,8 @@ namespace Xrm.DataManager.Framework
             InitializeClient();
         }
 
-        private void InitializeClient(bool forceReconnect = false)
+        private void InitializeClient()
         {
-            if (forceReconnect)
-            {
-                if (ParentServiceClient != null)
-                {
-                    ParentServiceClient = new ServiceClient(CrmConnectionString);
-                }
-            }
-
             if (IsCloneAvailable())
             {
                 Retry(() =>
@@ -210,14 +200,6 @@ namespace Xrm.DataManager.Framework
                 {
                     var result = action();
                     return result;
-                }
-                catch (Exception ex) when (ex is SecurityTokenValidationException || ex is ExpiredSecurityTokenException || ex is SecurityAccessDeniedException || ex is SecurityNegotiationException)
-                {
-                    if (--tries == 0)
-                    {
-                        throw;
-                    }
-                    InitializeClient(true);
                 }
                 catch (FaultException<OrganizationServiceFault> e) when (TransientIssueManager.IsTransientError(e))
                 {

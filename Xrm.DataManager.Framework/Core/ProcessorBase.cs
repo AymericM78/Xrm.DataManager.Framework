@@ -1,6 +1,7 @@
 
 
 using System;
+using System.Linq;
 
 namespace Xrm.DataManager.Framework
 {
@@ -27,20 +28,29 @@ namespace Xrm.DataManager.Framework
             get; private set;
         }
 
-        public ProcessorBase()
+        /// <summary>
+        /// Constructor with default logger (FileLogger)
+        /// </summary>
+        public ProcessorBase() : this(null)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="loggerFactory">ex : settings => new ApplicationInsightLogger(settings)</param>
+        public ProcessorBase(Func<JobSettings, ILogger> loggerFactory)
         {
             JobSettings = new JobSettings();
-            if (JobSettings.ApplicationInsightsEnabled)
-            {
-                Logger = new ApplicationInsightLogger(JobSettings);
-            }
-            else
-            {
-                Logger = new FileLogger(JobSettings);
-            }
+            Logger = loggerFactory?.Invoke(JobSettings) ?? new FileLogger(JobSettings);
             ConsoleHelper = new ConsoleHelper(Logger);
 
             Utilities.OutputContextInformation(JobSettings, Logger);
+
+            if (loggerFactory == null && JobSettings.ApplicationInsightsEnabled)
+            {
+                Logger.LogInformation("Application Insights is configured but default FileLogger is used : add Xrm.DataManager.Framework.ApplicationInsights package and provide ApplicationInsightLogger to processor constructor!");
+            }
         }
 
         /// <summary>
@@ -78,38 +88,49 @@ namespace Xrm.DataManager.Framework
         }
 
         /// <summary>
-        /// Initialize Organization client for D365 integration
+        /// Initialize Dataverse connection from configuration :
+        /// 1. connectionStrings entry named by JobSettings.SelectedInstanceName (command line) or Crm.Instance.Name setting
+        /// 2. Crm.ConnectionString setting
+        /// 3. connectionStrings entry (selected in console if several are defined)
         /// </summary>
-        protected void InitializeOrganizationServiceManager(Instance instance = null)
+        protected void InitializeOrganizationServiceManager()
         {
-            if (JobSettings.ConnectionStringDefined)
+            var connectionStrings = JobSettings.GetConnectionStrings();
+
+            var instanceName = string.IsNullOrEmpty(JobSettings.SelectedInstanceName) ? JobSettings.CrmInstanceName : JobSettings.SelectedInstanceName;
+            if (string.IsNullOrEmpty(instanceName))
             {
-                InitializeOrganizationServiceManager(JobSettings.CrmConnectionString);
-            }
-            else
-            {
-                if (instance != null)
+                if (JobSettings.ConnectionStringDefined)
                 {
-                    JobSettings.SelectedInstanceName = instance.UniqueName;
-                    if (!string.IsNullOrWhiteSpace(instance.ConnectionString))
-                    {
-                        InitializeOrganizationServiceManager(instance.ConnectionString);
-                    }
-                    else
-                    {
-                        throw new Exception("ConnectionString attribute is not defined in instances.xml!");
-                    }
+                    InitializeOrganizationServiceManager(JobSettings.CrmConnectionString);
+                    return;
                 }
+
+                if (connectionStrings.Count == 0)
+                {
+                    throw new Exception("Dataverse connection is not defined : add Crm.ConnectionString setting or connectionStrings section in configuration file!");
+                }
+
+                // Display connection strings selector
+                instanceName = (connectionStrings.Count == 1) ? connectionStrings.Keys.First() : ConsoleHelper.ConnectionStringSelect(connectionStrings.Keys.ToList());
             }
+
+            if (!connectionStrings.TryGetValue(instanceName, out var connectionString))
+            {
+                throw new Exception($"Connection string '{instanceName}' is not defined in connectionStrings section! (Available : {string.Join(", ", connectionStrings.Keys)})");
+            }
+            JobSettings.SelectedInstanceName = instanceName;
+            InitializeOrganizationServiceManager(connectionString);
         }
 
         /// <summary>
-        /// 
+        /// Initialize Dataverse connection with given connection string
         /// </summary>
         /// <param name="connectionString"></param>
         protected void InitializeOrganizationServiceManager(string connectionString)
         {
-            ProxiesPool = new ProxiesPool(connectionString, this.Logger, JobSettings.AffinityCookieEnabled);
+            JobSettings.SelectedConnectionString = connectionString;
+            ProxiesPool = new ProxiesPool(connectionString, this.Logger, JobSettings.AffinityCookieEnabled, JobSettings.ConnectionOptimizationsEnabled);
             CallerId = ProxiesPool.MainProxy.CallerId;
             Logger.LogInformation($"Organization service initialized to {ProxiesPool.InstanceUri} with user ID : {ProxiesPool.MainProxy.CallerId} !");
             Logger.LogInformation($"Server recommended degree of parallelism : {ProxiesPool.MainProxy.ServiceClient.RecommendedDegreesOfParallelism} (Process.Thread.Number = {JobSettings.ThreadNumber})");

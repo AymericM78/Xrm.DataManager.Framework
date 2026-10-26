@@ -26,6 +26,10 @@ namespace Xrm.DataManager.Framework
         private void InitializeClient()
         {
             // Application Insights 3.x : TelemetryConfiguration.Active and instrumentation key are gone, a connection string is required
+            if (!JobSettings.ApplicationInsightsEnabled)
+            {
+                throw new InvalidOperationException("Application Insights connection string is not defined! (AppInsights.ConnectionString setting)");
+            }
             TelemetryConfiguration = TelemetryConfiguration.CreateDefault();
             TelemetryConfiguration.ConnectionString = JobSettings.AppInsightsConnectionString;
             TelemetryClient = new TelemetryClient(TelemetryConfiguration);
