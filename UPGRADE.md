@@ -1,8 +1,8 @@
-# Upgrade guide : 2022.x ➜ 2026.0.0
+# Upgrade guide : 2022.x ➜ 2026.0.1
 
-Version 2026.0.0 is a major release : the framework now relies on the Dataverse ServiceClient, its dependencies are reduced to the minimum and the configuration has been simplified. This guide lists every change required to upgrade an application using `Xrm.DataManager.Framework` 2022.x.
+Version 2026.0.1 is a major release : the framework now relies on the Dataverse ServiceClient, its dependencies are reduced to the minimum and the configuration has been simplified. This guide lists every change required to upgrade an application using `Xrm.DataManager.Framework` 2022.x.
 
-> Versioning : packages now follow semantic versioning starting at 2026.0.0 (a lower major version such as 3.0.0 would be considered older than 2022.x by NuGet).
+> Versioning : packages now follow semantic versioning starting at 2026.0.1 (a lower major version such as 3.0.0 would be considered older than 2022.x by NuGet).
 
 ## Checklist
 

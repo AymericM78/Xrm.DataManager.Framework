@@ -43,7 +43,7 @@ Package|Description
 `Xrm.DataManager.Framework.ApplicationInsights`|Optional : Application Insights logger
 `Xrm.DataManager.Framework.Tds`|Optional : retrieve records with SQL (Dataverse TDS endpoint)
 
-Packages follow semantic versioning (major version changes on breaking changes). Versions start at 2026.0.0 : previous versions were date based (2022.x).
+Packages follow semantic versioning (major version changes on breaking changes). Versions start at 2026.0.1 : previous versions were date based (2022.x).
 
 ⚠️ Upgrading from 2022.x versions : see [upgrade guide](https://github.com/AymericM78/Xrm.DataManager.Framework/blob/master/UPGRADE.md).
 
