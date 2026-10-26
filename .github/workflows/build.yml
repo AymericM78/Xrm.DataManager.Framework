@@ -12,6 +12,11 @@ jobs:
     # Windows : .NET Framework 4.8 build and tests
     runs-on: windows-latest
 
+    permissions:
+      contents: read
+      # NuGet trusted publishing : GitHub OIDC token exchanged for a short-lived API key
+      id-token: write
+
     steps:
       - uses: actions/checkout@v7
 
@@ -42,11 +47,19 @@ jobs:
           name: packages
           path: artifacts/*.nupkg
 
-      # Requires NUGET_API_KEY repository secret (wildcard path isn't resolved by dotnet nuget push on Windows)
+      # Trusted publishing (nuget.org policy : AymericM78 / Xrm.DataManager.Framework / build.yml), key valid 1 hour
+      - name: NuGet login
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: AymericM
+
+      # Wildcard path isn't resolved by dotnet nuget push on Windows
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           foreach ($package in Get-ChildItem artifacts -Filter *.nupkg) {
-            dotnet nuget push $package.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+            dotnet nuget push $package.FullName --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
